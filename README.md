@@ -8,6 +8,7 @@ customers are risky. Turkish first, English supported.
 ## Install
 
 ```bash
+git clone https://github.com/yobelims-collab/alacakai.git
 cd alacakai
 npm install
 cp .env.example .env.local   # optional — the app runs without it
@@ -82,7 +83,7 @@ Financial state only ever changes from validated structured objects, never from 
 
 ## Deploy to Vercel
 
-1. Import the repo; set **Root Directory** to `alacakai` if it lives in a monorepo.
+1. Import the repo on vercel.com (no special root directory needed).
 2. Add the environment variables above (at least the Supabase pair; `SUPABASE_SERVICE_ROLE_KEY` + `CRON_SECRET`
    for the daily sweep defined in `vercel.json`).
 3. Deploy. `next build` runs without any env (demo mode), so previews work out of the box.
