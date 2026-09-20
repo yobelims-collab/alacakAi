@@ -127,6 +127,8 @@ export const automationSchema = z.object({
   escalation_days: z.coerce.number().int().min(3).max(180),
   channels: z.array(z.enum(CHANNELS)).min(1),
   require_approval: z.boolean(),
+  auto_send_pre_due: z.boolean(),
+  sales_involved_after_days: z.coerce.number().int().min(0).max(180),
 }).refine((v) => v.first_reminder_days < v.second_reminder_days && v.second_reminder_days < v.escalation_days, {
   message: "Hatırlatma günleri artan sırada olmalı (1. < 2. < eskalasyon)",
   path: ["escalation_days"],
@@ -145,6 +147,15 @@ export const companySettingsSchema = z.object({
   fx_eur: z.coerce.number().positive().optional(),
   fx_usd: z.coerce.number().positive().optional(),
   fx_gbp: z.coerce.number().positive().optional(),
+  approval_amount_threshold: z.coerce.number().min(0).max(1e12).optional(),
+});
+
+export const gradeRulesSchema = z.object({
+  A: z.string().trim().min(3).max(300),
+  B: z.string().trim().min(3).max(300),
+  C: z.string().trim().min(3).max(300),
+  D: z.string().trim().min(3).max(300),
+  E: z.string().trim().min(3).max(300),
 });
 
 export const aiSettingsSchema = z.object({

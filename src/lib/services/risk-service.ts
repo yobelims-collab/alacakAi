@@ -14,7 +14,13 @@ export async function recomputeRisk(
   const fin = computeCustomerFinancials(customer, data.invoices, data.payments, data.promises, asOf);
   const r = computeRiskScore(fin, { creditLimit: customer.credit_limit, locale });
   const existing = (await store.list("risk_scores", { where: { customer_id: customer.id }, limit: 1 }))[0];
-  const payload = { score: r.score, level: r.level, reasons: r.reasons, recommendation: r.recommendation, factors: r.factors, computed_at: new Date().toISOString() };
+  const month = asOf.slice(0, 7);
+  const history = [...(existing?.history ?? [])];
+  const last = history[history.length - 1];
+  const note = existing && existing.grade !== r.grade ? `${existing.grade} → ${r.grade}` : null;
+  if (!last || last.month !== month) history.push({ month, score: r.score, grade: r.grade, note });
+  else history[history.length - 1] = { month, score: r.score, grade: r.grade, note: note ?? last.note };
+  const payload = { score: r.score, level: r.level, grade: r.grade, reasons: r.reasons, facts: r.facts, recommendation: r.recommendation, factors: r.factors, history: history.slice(-12), computed_at: new Date().toISOString() };
   if (existing) return store.update("risk_scores", existing.id, payload);
   return store.insert("risk_scores", { customer_id: customer.id, ...payload });
 }

@@ -24,7 +24,7 @@ export interface ShellProps {
 
 function Logo() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2">
+    <Link href="/inbox" className="flex items-center gap-2">
       <span className="grid size-7 place-items-center rounded-md bg-primary text-[13px] font-bold text-primary-foreground">A</span>
       <span className="text-sm font-semibold tracking-tight">AlacakAI</span>
     </Link>

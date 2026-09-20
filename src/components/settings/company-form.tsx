@@ -92,6 +92,9 @@ export function CompanyForm({ org, t, locale }: { org: Organization; t: Dictiona
           <Field label={t.settings.defaultTerms}>
             <Input name="default_payment_terms_days" type="number" min={0} max={365} defaultValue={org.default_payment_terms_days} required />
           </Field>
+          <Field label={locale === "tr" ? `Onay eşiği (${org.reporting_currency})` : `Approval threshold (${org.reporting_currency})`} hint={locale === "tr" ? "Bu tutarın üzerindeki faturalarda vade öncesi hatırlatma bile insan onayı ister." : "Above this amount even a pre-due reminder needs human approval."}>
+            <Input name="approval_amount_threshold" type="number" min={0} step="1000" defaultValue={org.approval_amount_threshold} className="tabular" />
+          </Field>
           <Field label={c.orgLanguage} hint={c.orgLanguageHint}>
             <Select name="language" defaultValue={org.language}>
               <option value="tr">{t.common.turkish}</option>

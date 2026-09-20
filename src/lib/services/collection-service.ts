@@ -1,15 +1,17 @@
 import "server-only";
 import type { AppContext } from "@/lib/db";
 import type { DataStore } from "@/lib/db/store";
+import { decideApproval } from "@/lib/ai/approval-policy";
 import { planCollectionCycle, type PlannedAction } from "@/lib/ai/collection-agent";
+import { renderEscalationAlternatives, renderReplyAlternatives } from "@/lib/ai/reply-templates";
 import { evaluateEscalation } from "@/lib/ai/escalation-rules";
 import { generateMessage, validateOutboundMessage } from "@/lib/ai/message-generator";
 import { classifyReply } from "@/lib/ai/response-classifier";
 import type { TemplateFacts } from "@/lib/ai/templates";
 import { addDays, daysBetween, formatDate, today } from "@/lib/domain/dates";
 import { daysOverdue, deriveStatus, outstanding, stageForInvoice } from "@/lib/domain/invoices";
-import { formatMoney } from "@/lib/domain/money";
-import type { AutomationRule, Channel, Classification, CollectionStage, Communication, Customer, Invoice, Locale, Organization, PaymentPromise, Tone } from "@/lib/types";
+import { formatMoney, toReporting } from "@/lib/domain/money";
+import type { Audience, AutomationRule, Channel, Classification, CollectionStage, Communication, Customer, Grade, Invoice, Locale, Organization, PaymentPromise, Tone } from "@/lib/types";
 import { audit } from "./audit";
 import { classifierLlm, messageLlm } from "./llm";
 import { sendMessage } from "./messaging";
@@ -25,7 +27,14 @@ export const DEFAULT_AUTOMATION: Omit<AutomationRule, "id" | "created_at" | "org
   escalation_days: 30,
   channels: ["EMAIL"],
   require_approval: true,
+  auto_send_pre_due: true,
+  sales_involved_after_days: 14,
 };
+
+async function gradeOf(store: DataStore, customerId: string): Promise<Grade | null> {
+  const r = (await store.list("risk_scores", { where: { customer_id: customerId }, limit: 1 }))[0];
+  return r?.grade ?? null;
+}
 
 export async function getAutomationRules(store: DataStore): Promise<AutomationRule> {
   const existing = (await store.list("automation_rules", { limit: 1 }))[0];
@@ -95,7 +104,18 @@ export async function draftReminder(ctx: AppContext, inv: Invoice, opts: DraftOp
     messageLlm(),
   );
   const channel = opts.channel ?? primaryChannel(rules, customer);
-  const requireApproval = !(opts.autoSend ?? (org.ai_auto_send && !rules.require_approval));
+  const grade = await gradeOf(store, customer.id);
+  const approval = decideApproval({
+    stage,
+    amountInReportingCurrency: toReporting(outstanding(inv), inv.currency, org),
+    grade,
+    daysOverdue: Math.max(0, daysOverdue(inv, asOf)),
+    isDecision: false,
+    rules,
+    approvalAmountThreshold: org.approval_amount_threshold,
+    locale: ctx.locale,
+  });
+  const requireApproval = opts.autoSend === undefined ? !approval.autoSend : !opts.autoSend;
 
   const comm = await store.insert("communications", {
     customer_id: customer.id,
@@ -115,6 +135,11 @@ export async function draftReminder(ctx: AppContext, inv: Invoice, opts: DraftOp
     provider_message_id: null,
     next_action_at: null,
     next_action_note: null,
+    in_reply_to: null,
+    alternatives: null,
+    snoozed_until: null,
+    routed_to: approval.audience,
+    approval_reason: requireApproval ? approval.reason : null,
   });
 
   await store.update("invoices", inv.id, { last_reminder_stage: stage, last_reminder_at: new Date().toISOString(), collection_stage: stage, updated_at: new Date().toISOString() });
@@ -133,6 +158,8 @@ export async function draftReminder(ctx: AppContext, inv: Invoice, opts: DraftOp
       payload: { stage, generator: generated.generator },
       resolved_at: null,
       resolved_by: null,
+      routed_to: approval.audience,
+      decision: null,
     });
     return comm;
   }
@@ -170,6 +197,11 @@ export async function dispatchCommunication(ctx: AppContext, comm: Communication
     provider_message_id: result.providerMessageId,
     next_action_at: addDays(today(), 3),
     next_action_note: ctx.locale === "tr" ? "Yanıt gelmezse takip" : "Follow up if no reply",
+    in_reply_to: null,
+    alternatives: null,
+    snoozed_until: null,
+    routed_to: null,
+    approval_reason: null,
   });
 
   // Close the pending-approval action (if any) and log the send.
@@ -188,20 +220,105 @@ export async function dispatchCommunication(ctx: AppContext, comm: Communication
     payload: { channel: comm.channel, provider_status: result.status },
     resolved_at: null,
     resolved_by: null,
+    routed_to: null,
+    decision: null,
   });
   await audit(store, { user_id: userId, action: "communication.sent", entity_type: "communication", entity_id: comm.id, details: { status: result.status } });
   return updated;
 }
 
-export async function approveCommunication(ctx: AppContext, commId: string, edits?: { subject?: string; body?: string }): Promise<Communication> {
+export async function approveCommunication(ctx: AppContext, commId: string, edits?: { subject?: string; body?: string; variant?: "soft" | "firm" }): Promise<Communication> {
   const comm = await ctx.store.get("communications", commId);
   if (!comm || comm.direction !== "OUTBOUND") throw new Error("communication not found");
   if (comm.status !== "PENDING_APPROVAL" && comm.status !== "DRAFT") throw new Error("communication is not awaiting approval");
   let target = comm;
-  if (edits && (edits.subject !== undefined || edits.body !== undefined)) {
-    target = await ctx.store.update("communications", commId, { subject: edits.subject ?? comm.subject, body: edits.body ?? comm.body, generator: "human", ai_generated: false });
+  if (edits?.variant && comm.alternatives) {
+    const alt = comm.alternatives[edits.variant];
+    target = await ctx.store.update("communications", commId, { subject: alt.subject, body: alt.body, tone: edits.variant === "firm" ? "FIRM" : "POLITE" });
   }
-  return dispatchCommunication(ctx, target, ctx.user.id);
+  if (edits && (edits.subject !== undefined || edits.body !== undefined)) {
+    target = await ctx.store.update("communications", commId, { subject: edits.subject ?? target.subject, body: edits.body ?? target.body, generator: "human", ai_generated: false });
+  }
+  const sent = await dispatchCommunication(ctx, target, ctx.user.id);
+  // A decision card whose draft has been sent is done.
+  for (const a of await ctx.store.list("ai_actions", { where: { status: "NEEDS_HUMAN" } })) {
+    if ((a.payload as { draft_id?: string } | null)?.draft_id === commId) await ctx.store.update("ai_actions", a.id, { status: "RESOLVED", resolved_at: new Date().toISOString(), resolved_by: ctx.user.id, decision: a.decision ?? "REPLY_SENT" });
+  }
+  return sent;
+}
+
+/** Approves several routine drafts at once (inbox "send all"). Returns per-id outcome. */
+export async function approveMany(ctx: AppContext, ids: string[]): Promise<{ id: string; ok: boolean; error?: string }[]> {
+  const out: { id: string; ok: boolean; error?: string }[] = [];
+  for (const id of ids) {
+    try {
+      await approveCommunication(ctx, id);
+      out.push({ id, ok: true });
+    } catch (e) {
+      out.push({ id, ok: false, error: e instanceof Error ? e.message : "failed" });
+    }
+  }
+  return out;
+}
+
+/** Hides a pending draft from the inbox until `until` (YYYY-MM-DD). */
+export async function snoozeCommunication(ctx: AppContext, commId: string, until: string): Promise<void> {
+  const comm = await ctx.store.get("communications", commId);
+  if (!comm || comm.status !== "PENDING_APPROVAL") throw new Error("communication is not awaiting approval");
+  await ctx.store.update("communications", commId, { snoozed_until: until, next_action_at: until });
+  await audit(ctx.store, { user_id: ctx.user.id, action: "communication.snoozed", entity_type: "communication", entity_id: commId, details: { until } });
+}
+
+export type InboxDecision = "APPROVE_EXTENSION" | "HOLD_SHIPMENTS" | "RELEASE_SHIPMENTS" | "HANDLE_MYSELF" | "RESOLVE";
+
+/**
+ * Applies a human decision to a decision card. The AI then executes it: records the agreed
+ * date, updates the customer, and leaves the matching draft ready to send (or discards it).
+ */
+export async function decideAction(ctx: AppContext, actionId: string, decision: InboxDecision, payload: { date?: string } = {}): Promise<void> {
+  const action = await ctx.store.get("ai_actions", actionId);
+  if (!action || action.status !== "NEEDS_HUMAN") throw new Error("action is not awaiting a decision");
+  const now = new Date().toISOString();
+  const customer = action.customer_id ? await ctx.store.get("customers", action.customer_id) : null;
+  const invoice = action.invoice_id ? await ctx.store.get("invoices", action.invoice_id) : null;
+  const draftId = (action.payload as { draft_id?: string } | null)?.draft_id ?? null;
+  const draft = draftId ? await ctx.store.get("communications", draftId) : null;
+
+  switch (decision) {
+    case "APPROVE_EXTENSION": {
+      if (!invoice || !customer || !payload.date) throw new Error("date required");
+      for (const p of await ctx.store.list("payment_promises", { where: { invoice_id: invoice.id, status: "ACTIVE" } })) {
+        await ctx.store.update("payment_promises", p.id, { status: "CANCELLED", resolved_at: now });
+      }
+      await ctx.store.insert("payment_promises", { customer_id: customer.id, invoice_id: invoice.id, promised_date: payload.date, amount: outstanding(invoice), currency: invoice.currency, status: "ACTIVE", source_communication_id: draftId, notes: ctx.locale === "tr" ? "Ek süre onaylandı" : "Extension approved", resolved_at: null });
+      await ctx.store.update("invoices", invoice.id, { status: "PAYMENT_PROMISED", updated_at: now });
+      if (draft) {
+        const facts = factsFor(invoice, customer, ctx.org, today());
+        const alt = renderReplyAlternatives("PAYMENT_DATE_PROMISED", facts, customer.preferred_language, { promisedDate: payload.date });
+        await ctx.store.update("communications", draft.id, { subject: alt.soft.subject, body: alt.soft.body, alternatives: alt, tone: "POLITE", approval_reason: ctx.locale === "tr" ? "Ek süre onayı — gönderime hazır" : "Extension approved — ready to send" });
+      }
+      break;
+    }
+    case "HOLD_SHIPMENTS":
+    case "RELEASE_SHIPMENTS": {
+      if (!customer) throw new Error("customer required");
+      await ctx.store.update("customers", customer.id, { shipments_on_hold: decision === "HOLD_SHIPMENTS" });
+      if (draft && decision === "HOLD_SHIPMENTS" && draft.alternatives) {
+        await ctx.store.update("communications", draft.id, { subject: draft.alternatives.firm.subject, body: draft.alternatives.firm.body, tone: "FIRM" });
+      }
+      break;
+    }
+    case "HANDLE_MYSELF": {
+      if (draft) await rejectCommunication(ctx, draft.id);
+      break;
+    }
+    case "RESOLVE":
+      break;
+  }
+
+  await ctx.store.update("ai_actions", actionId, { status: "RESOLVED", resolved_at: now, resolved_by: ctx.user.id, decision });
+  await audit(ctx.store, { user_id: ctx.user.id, action: "ai_action.decided", entity_type: "ai_action", entity_id: actionId, details: { decision, ...payload } });
+  if (customer) await refreshCustomerRisk(ctx, customer);
 }
 
 export async function rejectCommunication(ctx: AppContext, commId: string): Promise<void> {
@@ -289,6 +406,19 @@ export async function runCollectionCycle(ctx: AppContext, opts: { trigger: "manu
 export async function escalateInvoice(ctx: AppContext, inv: Invoice, reason: string, userId: string | null, recommended?: string | null): Promise<void> {
   const customer = await ctx.store.get("customers", inv.customer_id);
   await ctx.store.update("invoices", inv.id, { status: "ESCALATED", collection_stage: "ESCALATED", updated_at: new Date().toISOString() });
+  // The AI prepares the handover message; a human decides which wording (if any) goes out.
+  let draftId: string | null = null;
+  if (customer) {
+    const alt = renderEscalationAlternatives(factsFor(inv, customer, ctx.org, today()), customer.preferred_language);
+    const draft = await ctx.store.insert("communications", {
+      customer_id: customer.id, invoice_id: inv.id, channel: customer.email ? "EMAIL" : "WHATSAPP", direction: "OUTBOUND",
+      subject: alt.soft.subject, body: alt.soft.body, language: customer.preferred_language, stage: "ESCALATED", tone: "POLITE",
+      status: "PENDING_APPROVAL", classification: null, ai_generated: true, generator: "template", sent_at: null, provider_message_id: null,
+      next_action_at: null, next_action_note: null, in_reply_to: null, alternatives: alt, snoozed_until: null, routed_to: "BOTH", approval_reason: reason,
+    });
+    draftId = draft.id;
+    await ctx.store.update("invoices", inv.id, { last_reminder_stage: "ESCALATED", last_reminder_at: new Date().toISOString() });
+  }
   await ctx.store.insert("ai_actions", {
     customer_id: inv.customer_id,
     invoice_id: inv.id,
@@ -299,9 +429,11 @@ export async function escalateInvoice(ctx: AppContext, inv: Invoice, reason: str
     title: `${ctx.t.actionType.ESCALATION}: ${customer?.company_name ?? ""} · ${inv.invoice_number}`,
     description: reason,
     recommended_action: recommended ?? (ctx.locale === "tr" ? "Hesap yöneticisi müşteriyle ödeme planını görüşmeli." : "Account manager should agree a payment plan with the customer."),
-    payload: { days_overdue: daysOverdue(inv, today()), outstanding: outstanding(inv), currency: inv.currency },
+    payload: { days_overdue: daysOverdue(inv, today()), outstanding: outstanding(inv), currency: inv.currency, draft_id: draftId },
     resolved_at: null,
     resolved_by: null,
+    routed_to: "BOTH",
+    decision: null,
   });
   await audit(ctx.store, { user_id: userId, action: "invoice.escalated", entity_type: "invoice", entity_id: inv.id, details: { reason } });
   if (customer) await refreshCustomerRisk(ctx, customer);
@@ -324,6 +456,8 @@ async function markPromiseBroken(ctx: AppContext, promise: PaymentPromise, inv: 
     payload: { promise_id: promise.id, promised_date: promise.promised_date },
     resolved_at: null,
     resolved_by: null,
+    routed_to: "BOTH",
+    decision: null,
   });
   if (customer) await refreshCustomerRisk(ctx, customer);
 }
@@ -389,6 +523,11 @@ export async function processInboundReply(ctx: AppContext, input: { customerId: 
     provider_message_id: input.source === "simulated" ? "simulated" : null,
     next_action_at: nextAction.at,
     next_action_note: nextAction.note,
+    in_reply_to: null,
+    alternatives: null,
+    snoozed_until: null,
+    routed_to: null,
+    approval_reason: null,
   });
 
   await store.insert("ai_actions", {
@@ -404,6 +543,8 @@ export async function processInboundReply(ctx: AppContext, input: { customerId: 
     payload: { intent: finalClassification.intent, confidence: finalClassification.confidence, engine: finalClassification.engine },
     resolved_at: null,
     resolved_by: null,
+    routed_to: null,
+    decision: null,
   });
 
   let promise: PaymentPromise | null = null;
@@ -438,11 +579,46 @@ export async function processInboundReply(ctx: AppContext, input: { customerId: 
       payload: { promise_id: promise.id, promised_date: promise.promised_date },
       resolved_at: null,
       resolved_by: null,
+      routed_to: null,
+      decision: null,
     });
   }
 
   if (finalClassification.intent === "DISPUTE" && invoice) {
     await store.update("invoices", invoice.id, { status: "DISPUTED", updated_at: new Date().toISOString() });
+  }
+
+  // The AI always prepares the answer; a human sends it. Decisions get both wordings.
+  let draft: Communication | null = null;
+  if (invoice) {
+    const facts = factsFor(invoice, customer, org, asOf);
+    const alt = renderReplyAlternatives(finalClassification.intent, facts, customer.preferred_language, { promisedDate: finalClassification.promised_date, extensionDays: finalClassification.requested_extension_days });
+    const rules = await getAutomationRules(store);
+    const audience: Audience = decision.escalate || daysOverdue(invoice, asOf) >= rules.sales_involved_after_days ? "BOTH" : "FINANCE";
+    draft = await store.insert("communications", {
+      customer_id: customer.id,
+      invoice_id: invoice.id,
+      channel: input.channel,
+      direction: "OUTBOUND",
+      subject: alt.soft.subject,
+      body: alt.soft.body,
+      language: customer.preferred_language,
+      stage: invoice.collection_stage,
+      tone: "POLITE",
+      status: "PENDING_APPROVAL",
+      classification: null,
+      ai_generated: true,
+      generator: "template",
+      sent_at: null,
+      provider_message_id: null,
+      next_action_at: null,
+      next_action_note: null,
+      in_reply_to: comm.id,
+      alternatives: alt,
+      snoozed_until: null,
+      routed_to: audience,
+      approval_reason: decision.escalate ? decision.reasons.join(" · ") : ctx.locale === "tr" ? `Müşteri yanıtına cevap (${ctx.t.intent[finalClassification.intent]})` : `Reply to customer (${ctx.t.intent[finalClassification.intent]})`,
+    });
   }
 
   if (decision.escalate) {
@@ -456,9 +632,11 @@ export async function processInboundReply(ctx: AppContext, input: { customerId: 
       title: `${customer.company_name}: ${ctx.t.intent[finalClassification.intent]}`,
       description: decision.reasons.join(" · "),
       recommended_action: decision.recommendedAction,
-      payload: { intent: finalClassification.intent, reasons: decision.reasons, invoice_number: invoice?.invoice_number ?? null, outstanding: invoice ? outstanding(invoice) : null, currency: invoice?.currency ?? null },
+      payload: { intent: finalClassification.intent, reasons: decision.reasons, invoice_number: invoice?.invoice_number ?? null, outstanding: invoice ? outstanding(invoice) : null, currency: invoice?.currency ?? null, draft_id: draft?.id ?? null, requested_extension_days: finalClassification.requested_extension_days, promised_date: finalClassification.promised_date },
       resolved_at: null,
       resolved_by: null,
+      routed_to: "BOTH",
+      decision: null,
     });
   }
 
@@ -521,6 +699,8 @@ export async function setInvoiceStatus(ctx: AppContext, invoiceId: string, statu
     payload: { from: inv.status, to: status, by: ctx.user.id },
     resolved_at: null,
     resolved_by: null,
+    routed_to: null,
+    decision: null,
   });
   await audit(ctx.store, { user_id: ctx.user.id, action: "invoice.status", entity_type: "invoice", entity_id: invoiceId, details: { from: inv.status, to: status } });
   const customer = await ctx.store.get("customers", inv.customer_id);

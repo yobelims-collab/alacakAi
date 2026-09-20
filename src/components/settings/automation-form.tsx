@@ -134,6 +134,16 @@ export function AutomationForm({ rules, t, locale }: { rules: AutomationRule; t:
             </div>
             <div className="flex items-start justify-between gap-4 rounded-lg border p-3.5">
               <div className="flex flex-col gap-1">
+                <Label htmlFor="auto_send_pre_due">{locale === "tr" ? "Vade öncesi hatırlatmaları otomatik gönder" : "Send pre-due reminders automatically"}</Label>
+                <p className="text-[11px] text-muted-foreground">{locale === "tr" ? "AI'nın kendi başına gönderdiği tek mesaj türü. Vade sonrası her mesaj Gelen Kutusu'nda onay bekler." : "The only message type the AI sends on its own. Everything after the due date waits in the Inbox."}</p>
+              </div>
+              <Switch id="auto_send_pre_due" name="auto_send_pre_due" defaultChecked={rules.auto_send_pre_due} />
+            </div>
+            <Field label={locale === "tr" ? "Satış ekibi kaç gün gecikmeden sonra devreye girsin" : "Loop in sales after (days overdue)"} hint={locale === "tr" ? "Bu günden itibaren kartlar hesap yöneticisine de gösterilir." : "From this day the cards are also shown to the account manager."}>
+              <Input name="sales_involved_after_days" type="number" min={0} max={180} defaultValue={rules.sales_involved_after_days} required className="tabular" />
+            </Field>
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-3.5">
+              <div className="flex flex-col gap-1">
                 <Label htmlFor="require_approval">{t.settings.requireApproval}</Label>
                 <p className="text-[11px] text-muted-foreground">{c.approvalHint}</p>
               </div>

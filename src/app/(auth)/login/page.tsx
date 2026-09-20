@@ -8,7 +8,7 @@ export const metadata = { title: "Sign in" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ demo?: string | string[] }> }) {
   const user = await getSessionUser();
-  if (user) redirect(user.organization_id ? "/dashboard" : "/onboarding");
+  if (user) redirect(user.organization_id ? "/inbox" : "/onboarding");
   const { demo } = await searchParams;
   const { t, locale } = await getT();
   return <LoginForm t={t} locale={locale} demo={isDemoMode()} highlightDemo={demo === "1"} />;

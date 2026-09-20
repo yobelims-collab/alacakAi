@@ -1,4 +1,4 @@
-import type { Locale, RiskLevel } from "@/lib/types";
+import type { Grade, Locale, RiskLevel } from "@/lib/types";
 import type { CustomerFinancials } from "@/lib/domain/metrics";
 import { formatMoney } from "@/lib/domain/money";
 
@@ -10,9 +10,54 @@ import { formatMoney } from "@/lib/domain/money";
 export interface RiskResult {
   score: number;
   level: RiskLevel;
+  grade: Grade;
   reasons: string[];
+  /** Plain-language facts a new employee understands without knowing the formula. */
+  facts: string[];
   recommendation: string;
   factors: Record<string, number>;
+}
+
+/** Rating letter: A pays on time … E stop list. Thresholds on the 0–100 score. */
+export function gradeForScore(score: number): Grade {
+  if (score <= 15) return "A";
+  if (score <= 35) return "B";
+  if (score <= 60) return "C";
+  if (score <= 85) return "D";
+  return "E";
+}
+
+/** Default company rule per grade; editable in Settings and shown next to the letter. */
+export function defaultGradeRules(locale: Locale): Record<Grade, string> {
+  return locale === "tr"
+    ? {
+        A: "Kısıtlama yok. Standart vade ile sevkiyat yapılabilir.",
+        B: "Kısıtlama yok. Vade öncesi hatırlatmalar açık kalsın.",
+        C: "Açık bakiye kredi limitini aşmadığı sürece sevkiyat yapılabilir; yeni sipariş öncesi bakiyeyi kontrol edin.",
+        D: "Yalnızca ön ödeme ile veya hesap yöneticisinin onayıyla sevkiyat yapın.",
+        E: "Sevkiyat durduruldu. Genel müdür onayı olmadan yeni sipariş kabul etmeyin.",
+      }
+    : {
+        A: "No restrictions. Ship on standard terms.",
+        B: "No restrictions. Keep pre-due reminders on.",
+        C: "Ship while the open balance stays under the credit limit; check the balance before new orders.",
+        D: "Prepayment only, or shipment with the account manager's approval.",
+        E: "Shipments on hold. No new orders without the general manager's approval.",
+      };
+}
+
+export function plainFacts(f: CustomerFinancials, locale: Locale): string[] {
+  const tr = locale === "tr";
+  const out: string[] = [];
+  if (f.totalInvoiced === 0) return [tr ? "Henüz fatura geçmişi yok." : "No invoice history yet."];
+  if (f.averageDelayDays > 0) out.push(tr ? `Ortalama vadeden ${f.averageDelayDays} gün sonra ödüyor.` : `Pays on average ${f.averageDelayDays} days after the due date.`);
+  else out.push(tr ? "Faturaları vadesinde ödüyor." : "Pays invoices on time.");
+  if (f.overdueCount > 0) out.push(tr ? `Şu anda ${f.overdueCount} gecikmiş fatura var (${formatMoney(f.overdue, f.currency, "tr", { compact: true })}).` : `${f.overdueCount} invoice${f.overdueCount > 1 ? "s are" : " is"} overdue right now (${formatMoney(f.overdue, f.currency, "en", { compact: true })}).`);
+  else out.push(tr ? "Şu anda gecikmiş fatura yok." : "No overdue invoices right now.");
+  if (f.brokenPromises90d > 0) out.push(tr ? `Son 90 günde ${f.brokenPromises90d} ödeme sözünü tutmadı.` : `Broke ${f.brokenPromises90d} payment promise${f.brokenPromises90d > 1 ? "s" : ""} in the last 90 days.`);
+  if (f.disputedCount > 0) out.push(tr ? `${f.disputedCount} faturaya itiraz etti.` : `Disputed ${f.disputedCount} invoice${f.disputedCount > 1 ? "s" : ""}.`);
+  if (f.lastPaymentDate) out.push(tr ? `Son ödeme: ${f.lastPaymentDate}.` : `Last payment: ${f.lastPaymentDate}.`);
+  return out;
 }
 
 export function levelForScore(score: number): RiskLevel {
@@ -89,7 +134,7 @@ export function computeRiskScore(
 
   const recommendation = recommendationFor(level, f, locale);
   if (reasons.length === 0) reasons.push(tr ? "Ödeme davranışı düzenli" : "Regular payment behaviour");
-  return { score, level, reasons, recommendation, factors };
+  return { score, level, grade: gradeForScore(score), reasons, facts: plainFacts(f, locale), recommendation, factors };
 }
 
 function recommendationFor(level: RiskLevel, f: CustomerFinancials, locale: Locale): string {

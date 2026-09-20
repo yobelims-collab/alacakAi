@@ -81,6 +81,7 @@ export async function importInvoices(ctx: AppContext, rows: InvoiceCsvRow[]): Pr
         currency: r.currency,
         notes: null,
         account_manager_id: null,
+        shipments_on_hold: false,
       });
       byName.set(key, customer);
       createdCustomers += 1;

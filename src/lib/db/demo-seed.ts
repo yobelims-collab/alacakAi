@@ -3,7 +3,8 @@ import { addDays, today } from "@/lib/domain/dates";
 import { deriveStatus, outstanding, stageForInvoice } from "@/lib/domain/invoices";
 import { formatMoney } from "@/lib/domain/money";
 import { renderTemplate } from "@/lib/ai/templates";
-import { computeRiskScore } from "@/lib/ai/risk-analyzer";
+import { renderEscalationAlternatives, renderReplyAlternatives } from "@/lib/ai/reply-templates";
+import { computeRiskScore, defaultGradeRules, gradeForScore } from "@/lib/ai/risk-analyzer";
 import { computeCustomerFinancials } from "@/lib/domain/metrics";
 import { getMemoryDatabase, MemoryStore } from "./memory-store";
 import type { DataStore } from "./store";
@@ -34,6 +35,8 @@ export function demoOrganizationDefaults(name: string, overrides: Partial<Organi
     sender_name: null,
     sender_email: null,
     whatsapp_number: null,
+    grade_rules: defaultGradeRules(overrides.language ?? "tr"),
+    approval_amount_threshold: 250000,
     ...overrides,
   };
 }
@@ -89,16 +92,16 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
   const org = await store.getOrganization();
 
   const customerDefs: NewCustomer[] = [
-    { company_name: "ABC Teknoloji A.Ş.", contact_person: "Ahmet Yılmaz", email: "ahmet.yilmaz@abcteknoloji.com", phone: "+90 212 555 0101", whatsapp_number: "+90 532 555 0101", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 80000, currency: "EUR", notes: "Kurumsal müşteri; ödemeler genelde finans onayı sonrası gecikiyor.", account_manager_id: opts.ownerUserId },
-    { company_name: "Kuzey Gıda Ltd. Şti.", contact_person: "Elif Kaya", email: "elif.kaya@kuzeygida.com.tr", phone: "+90 232 555 0202", whatsapp_number: "+90 533 555 0202", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 500000, currency: "TRY", notes: null, account_manager_id: opts.ownerUserId },
-    { company_name: "Marmara Yapı Malzemeleri A.Ş.", contact_person: "Murat Demirci", email: "muhasebe@marmarayapi.com", phone: "+90 262 555 0303", whatsapp_number: null, country: "TR", preferred_language: "tr", payment_terms_days: 45, credit_limit: 750000, currency: "TRY", notes: null, account_manager_id: null },
-    { company_name: "Ege Tekstil San. Tic. Ltd.", contact_person: "Selin Arslan", email: "selin@egetekstil.com", phone: "+90 232 555 0404", whatsapp_number: "+90 535 555 0404", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 60000, currency: "EUR", notes: null, account_manager_id: null },
-    { company_name: "Anadolu Otomotiv Yedek Parça", contact_person: "Burak Şahin", email: "burak@anadoluotomotiv.com", phone: "+90 312 555 0505", whatsapp_number: "+90 536 555 0505", country: "TR", preferred_language: "tr", payment_terms_days: 60, credit_limit: 400000, currency: "TRY", notes: null, account_manager_id: null },
-    { company_name: "Nordwind Handel GmbH", contact_person: "Julia Weber", email: "j.weber@nordwind-handel.de", phone: "+49 40 555 0606", whatsapp_number: null, country: "DE", preferred_language: "en", payment_terms_days: 30, credit_limit: 120000, currency: "EUR", notes: "Prefers email. Finance closes on Fridays.", account_manager_id: null },
-    { company_name: "Baltic Foods OÜ", contact_person: "Kristjan Tamm", email: "kristjan@balticfoods.ee", phone: "+372 555 0707", whatsapp_number: null, country: "EE", preferred_language: "en", payment_terms_days: 30, credit_limit: 50000, currency: "EUR", notes: null, account_manager_id: null },
-    { company_name: "Karadeniz Mobilya San. A.Ş.", contact_person: "Hasan Çelik", email: "hasan.celik@karadenizmobilya.com", phone: "+90 462 555 0808", whatsapp_number: "+90 538 555 0808", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 300000, currency: "TRY", notes: "Son 6 ayda ödeme disiplini bozuldu.", account_manager_id: opts.ownerUserId },
-    { company_name: "Çukurova Tarım Ürünleri Ltd.", contact_person: "Ayşe Öztürk", email: "ayse@cukurovatarim.com", phone: "+90 322 555 0909", whatsapp_number: "+90 539 555 0909", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 250000, currency: "TRY", notes: null, account_manager_id: null },
-    { company_name: "Levant Trading FZE", contact_person: "Omar Haddad", email: "omar@levanttrading.ae", phone: "+971 4 555 1010", whatsapp_number: "+971 50 555 1010", country: "AE", preferred_language: "en", payment_terms_days: 45, credit_limit: 90000, currency: "USD", notes: null, account_manager_id: null },
+    { company_name: "ABC Teknoloji A.Ş.", contact_person: "Ahmet Yılmaz", email: "ahmet.yilmaz@abcteknoloji.com", phone: "+90 212 555 0101", whatsapp_number: "+90 532 555 0101", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 80000, currency: "EUR", notes: "Kurumsal müşteri; ödemeler genelde finans onayı sonrası gecikiyor.", account_manager_id: opts.ownerUserId, shipments_on_hold: false },
+    { company_name: "Kuzey Gıda Ltd. Şti.", contact_person: "Elif Kaya", email: "elif.kaya@kuzeygida.com.tr", phone: "+90 232 555 0202", whatsapp_number: "+90 533 555 0202", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 500000, currency: "TRY", notes: null, account_manager_id: opts.ownerUserId, shipments_on_hold: false },
+    { company_name: "Marmara Yapı Malzemeleri A.Ş.", contact_person: "Murat Demirci", email: "muhasebe@marmarayapi.com", phone: "+90 262 555 0303", whatsapp_number: null, country: "TR", preferred_language: "tr", payment_terms_days: 45, credit_limit: 750000, currency: "TRY", notes: null, account_manager_id: null, shipments_on_hold: false },
+    { company_name: "Ege Tekstil San. Tic. Ltd.", contact_person: "Selin Arslan", email: "selin@egetekstil.com", phone: "+90 232 555 0404", whatsapp_number: "+90 535 555 0404", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 60000, currency: "EUR", notes: null, account_manager_id: null, shipments_on_hold: false },
+    { company_name: "Anadolu Otomotiv Yedek Parça", contact_person: "Burak Şahin", email: "burak@anadoluotomotiv.com", phone: "+90 312 555 0505", whatsapp_number: "+90 536 555 0505", country: "TR", preferred_language: "tr", payment_terms_days: 60, credit_limit: 400000, currency: "TRY", notes: null, account_manager_id: null, shipments_on_hold: false },
+    { company_name: "Nordwind Handel GmbH", contact_person: "Julia Weber", email: "j.weber@nordwind-handel.de", phone: "+49 40 555 0606", whatsapp_number: null, country: "DE", preferred_language: "en", payment_terms_days: 30, credit_limit: 120000, currency: "EUR", notes: "Prefers email. Finance closes on Fridays.", account_manager_id: null, shipments_on_hold: false },
+    { company_name: "Baltic Foods OÜ", contact_person: "Kristjan Tamm", email: "kristjan@balticfoods.ee", phone: "+372 555 0707", whatsapp_number: null, country: "EE", preferred_language: "en", payment_terms_days: 30, credit_limit: 50000, currency: "EUR", notes: null, account_manager_id: null, shipments_on_hold: false },
+    { company_name: "Karadeniz Mobilya San. A.Ş.", contact_person: "Hasan Çelik", email: "hasan.celik@karadenizmobilya.com", phone: "+90 462 555 0808", whatsapp_number: "+90 538 555 0808", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 300000, currency: "TRY", notes: "Son 6 ayda ödeme disiplini bozuldu.", account_manager_id: opts.ownerUserId, shipments_on_hold: false },
+    { company_name: "Çukurova Tarım Ürünleri Ltd.", contact_person: "Ayşe Öztürk", email: "ayse@cukurovatarim.com", phone: "+90 322 555 0909", whatsapp_number: "+90 539 555 0909", country: "TR", preferred_language: "tr", payment_terms_days: 30, credit_limit: 250000, currency: "TRY", notes: null, account_manager_id: null, shipments_on_hold: false },
+    { company_name: "Levant Trading FZE", contact_person: "Omar Haddad", email: "omar@levanttrading.ae", phone: "+971 4 555 1010", whatsapp_number: "+971 50 555 1010", country: "AE", preferred_language: "en", payment_terms_days: 45, credit_limit: 90000, currency: "USD", notes: null, account_manager_id: null, shipments_on_hold: false },
   ];
   const customers = await store.insertMany("customers", customerDefs);
   const C = Object.fromEntries(customers.map((c, i) => [i, c])) as Record<number, Customer>;
@@ -221,7 +224,7 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
     const c = customers.find((x) => x.id === i.customer_id)!;
     const f = facts(i, c);
     const t = renderTemplate(stage ?? "OVERDUE_EARLY", "PROFESSIONAL", { ...f, daysOverdue: Math.round(f.daysOverdue) }, c.preferred_language);
-    commDefs.push({ customer_id: c.id, invoice_id: i.id, channel: c.email ? "EMAIL" : "WHATSAPP", direction: "OUTBOUND", subject: t.subject, body: t.body, language: c.preferred_language, stage, tone: "PROFESSIONAL", status, classification: null, ai_generated: true, generator: "template", sent_at: status === "PENDING_APPROVAL" ? null : d(-daysAgo) + "T09:15:00.000Z", provider_message_id: null, next_action_at: status === "PENDING_APPROVAL" ? null : d(-daysAgo + 3), next_action_note: status === "PENDING_APPROVAL" ? null : c.preferred_language === "tr" ? "Yanıt gelmezse takip" : "Follow up if no reply", created_at: d(-daysAgo) + "T09:15:00.000Z" } as never);
+    commDefs.push({ customer_id: c.id, invoice_id: i.id, channel: c.email ? "EMAIL" : "WHATSAPP", direction: "OUTBOUND", subject: t.subject, body: t.body, language: c.preferred_language, stage, tone: "PROFESSIONAL", status, classification: null, ai_generated: true, generator: "template", sent_at: status === "PENDING_APPROVAL" ? null : d(-daysAgo) + "T09:15:00.000Z", provider_message_id: null, approval_reason: status === "PENDING_APPROVAL" ? "Tutar onay eşiğinin üzerinde" : null, next_action_at: status === "PENDING_APPROVAL" ? null : d(-daysAgo + 3), next_action_note: status === "PENDING_APPROVAL" ? null : c.preferred_language === "tr" ? "Yanıt gelmezse takip" : "Follow up if no reply", created_at: d(-daysAgo) + "T09:15:00.000Z" } as never);
   };
   const inb = (num: string, body: string, daysAgo: number, cls: Communication["classification"], nextAt: string | null, nextNote: string | null): void => {
     const i = I(num);
@@ -249,6 +252,35 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
 
   const comms = await store.insertMany("communications", commDefs);
   const pendingDraft = comms.find((c) => c.status === "PENDING_APPROVAL");
+
+  // AI-prepared answers waiting for a human: one per open decision, plus routine drafts for the inbox.
+  const replyDraft = async (num: string, intent: import("@/lib/types").Intent, reason: string, extra: { promisedDate?: string | null; extensionDays?: number | null } = {}, routed: import("@/lib/types").Audience = "BOTH") => {
+    const i = I(num);
+    const c = customers.find((x) => x.id === i.customer_id)!;
+    const inbound = comms.find((x) => x.invoice_id === i.id && x.direction === "INBOUND") ?? null;
+    const f = facts(i, c);
+    const alt = renderReplyAlternatives(intent, { ...f, daysOverdue: Math.round(f.daysOverdue) }, c.preferred_language, extra);
+    return store.insert("communications", { customer_id: c.id, invoice_id: i.id, channel: "EMAIL", direction: "OUTBOUND", subject: alt.soft.subject, body: alt.soft.body, language: c.preferred_language, stage: i.collection_stage, tone: "POLITE", status: "PENDING_APPROVAL", classification: null, ai_generated: true, generator: "template", sent_at: null, provider_message_id: null, next_action_at: null, next_action_note: null, in_reply_to: inbound?.id ?? null, alternatives: alt, snoozed_until: null, routed_to: routed, approval_reason: reason });
+  };
+  const abcDraft = await replyDraft("INV-2026-00182", "REQUEST_EXTENSION", "Müşteri 30 günlük ek süre istiyor · Müşteri nakit akışı sorunu bildiriyor · Daha önce 2 söz tutulmadı", { extensionDays: 30 });
+  const karadenizDraft = await replyDraft("INV-2026-00168", "DISPUTE", "Müşteri faturaya itiraz ediyor · Ürün / sevkiyat sorunu bildirildi");
+  const escalationDraft = await (async () => {
+    const i = I("INV-2026-00148");
+    const c = customers.find((x) => x.id === i.customer_id)!;
+    const f = facts(i, c);
+    const alt = renderEscalationAlternatives({ ...f, daysOverdue: Math.round(f.daysOverdue) }, c.preferred_language);
+    return store.insert("communications", { customer_id: c.id, invoice_id: i.id, channel: "EMAIL", direction: "OUTBOUND", subject: alt.soft.subject, body: alt.soft.body, language: c.preferred_language, stage: "ESCALATED", tone: "POLITE", status: "PENDING_APPROVAL", classification: null, ai_generated: true, generator: "template", sent_at: null, provider_message_id: null, next_action_at: null, next_action_note: null, in_reply_to: null, alternatives: alt, snoozed_until: null, routed_to: "BOTH", approval_reason: "30+ gün gecikme; iki hatırlatmaya yanıt yok" });
+  })();
+  const nordwindDraft = await replyDraft("INV-2026-00186", "PAYMENT_CONFIRMED", "Reply to customer (Says payment made)", {}, "FINANCE");
+  const anadoluDraft = await (async () => {
+    const i = I("INV-2026-00170");
+    const c = customers.find((x) => x.id === i.customer_id)!;
+    const f = facts(i, c);
+    const tpl = renderTemplate("OVERDUE_MID", "PROFESSIONAL", { ...f, daysOverdue: Math.round(f.daysOverdue) }, c.preferred_language);
+    return store.insert("communications", { customer_id: c.id, invoice_id: i.id, channel: "EMAIL", direction: "OUTBOUND", subject: tpl.subject, body: tpl.body, language: c.preferred_language, stage: "OVERDUE_MID", tone: "PROFESSIONAL", status: "PENDING_APPROVAL", classification: null, ai_generated: true, generator: "template", sent_at: null, provider_message_id: null, next_action_at: null, next_action_note: null, in_reply_to: null, alternatives: null, snoozed_until: null, routed_to: "FINANCE", approval_reason: "Vade sonrası mesajlar insan onayı ister" });
+  })();
+  void nordwindDraft;
+  void anadoluDraft;
   await store.update("invoices", I("INV-2026-00182").id, { last_reminder_stage: "OVERDUE_MID", last_reminder_at: d(-4) + "T09:15:00.000Z", collection_stage: "OVERDUE_MID" });
   await store.update("invoices", I("INV-2026-00175").id, { last_reminder_stage: "OVERDUE_EARLY", last_reminder_at: d(-8) + "T09:15:00.000Z", collection_stage: "OVERDUE_MID" });
   await store.update("invoices", I("INV-2026-00180").id, { last_reminder_stage: "OVERDUE_EARLY", last_reminder_at: d(-6) + "T09:15:00.000Z", collection_stage: "OVERDUE_MID" });
@@ -260,7 +292,7 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
   await store.update("invoices", I("INV-2026-00194").id, { last_reminder_stage: "PRE_DUE", last_reminder_at: nowIso, collection_stage: "PRE_DUE" });
 
   // Automation rules
-  await store.insert("automation_rules", { pre_due_enabled: true, pre_due_days: 3, due_date_enabled: true, overdue_enabled: true, first_reminder_days: 1, second_reminder_days: 7, escalation_days: 30, channels: ["EMAIL", "WHATSAPP"], require_approval: true });
+  await store.insert("automation_rules", { pre_due_enabled: true, pre_due_days: 3, due_date_enabled: true, overdue_enabled: true, first_reminder_days: 1, second_reminder_days: 7, escalation_days: 30, channels: ["EMAIL", "WHATSAPP"], require_approval: true, auto_send_pre_due: true, sales_involved_after_days: 14 });
 
   // Set collection stages for all invoices according to the rules
   const rules = (await store.list("automation_rules"))[0];
@@ -296,9 +328,9 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
     A({ customer: 9, invoice: "INV-2026-00180", type: "PROMISE_RECORDED", status: "COMPLETED", severity: "SUCCESS", title: `Ödeme sözü kaydedildi: Levant Trading FZE · ${d(6)}`, description: `INV-2026-00180 · ${money("INV-2026-00180")}`, daysAgo: 5 }),
     A({ customer: 0, invoice: "INV-2026-00182", type: "REMINDER_SENT", status: "COMPLETED", severity: "SUCCESS", title: "Hatırlatma gönderildi: ABC Teknoloji A.Ş. (Simüle edildi)", description: "8–30 gün gecikme", daysAgo: 4 }),
     A({ customer: 0, invoice: "INV-2026-00182", type: "REPLY_CLASSIFIED", status: "COMPLETED", severity: "INFO", title: "Yanıt sınıflandırıldı: ABC Teknoloji → Ek süre talebi", description: "30 gün ek süre talebi (93%, rules)", daysAgo: 3 }),
-    A({ customer: 0, invoice: "INV-2026-00182", type: "ESCALATION", status: "NEEDS_HUMAN", severity: "WARNING", title: "ABC Teknoloji A.Ş.: Ek süre talebi", description: "Müşteri 30 günlük ek süre istiyor · Müşteri nakit akışı sorunu bildiriyor · Daha önce 2 söz tutulmadı", recommended: "Ek süreyi onaylamadan önce kredi riskini gözden geçirin.", daysAgo: 3, payload: { intent: "REQUEST_EXTENSION", invoice_number: "INV-2026-00182", outstanding: 18500, currency: "EUR" } }),
-    A({ customer: 7, invoice: "INV-2026-00148", type: "ESCALATION", status: "NEEDS_HUMAN", severity: "CRITICAL", title: "Eskalasyon: Karadeniz Mobilya San. A.Ş. · INV-2026-00148", description: "30+ gün gecikme; iki hatırlatmaya yanıt yok", recommended: "Hesap yöneticisi müşteriyle ödeme planını görüşmeli; yeni sevkiyatları durdurun.", daysAgo: 17, payload: { days_overdue: 48, outstanding: 265000, currency: "TRY" } }),
-    A({ customer: 7, invoice: "INV-2026-00168", type: "ESCALATION", status: "NEEDS_HUMAN", severity: "CRITICAL", title: "Karadeniz Mobilya San. A.Ş.: İtiraz", description: "Müşteri faturaya itiraz ediyor · Ürün / sevkiyat sorunu bildirildi", recommended: "Hasar tutanağını operasyonla doğrulayıp müşteriyle mutabakat yapın.", daysAgo: 19, payload: { intent: "DISPUTE", invoice_number: "INV-2026-00168", outstanding: 142000, currency: "TRY" } }),
+    A({ customer: 0, invoice: "INV-2026-00182", type: "ESCALATION", status: "NEEDS_HUMAN", severity: "WARNING", title: "ABC Teknoloji A.Ş.: Ek süre talebi", description: "Müşteri 30 günlük ek süre istiyor · Müşteri nakit akışı sorunu bildiriyor · Daha önce 2 söz tutulmadı", recommended: "Ek süreyi onaylamadan önce kredi riskini gözden geçirin.", daysAgo: 3, payload: { intent: "REQUEST_EXTENSION", invoice_number: "INV-2026-00182", outstanding: 18500, currency: "EUR", draft_id: abcDraft.id, requested_extension_days: 30 } }),
+    A({ customer: 7, invoice: "INV-2026-00148", type: "ESCALATION", status: "NEEDS_HUMAN", severity: "CRITICAL", title: "Eskalasyon: Karadeniz Mobilya San. A.Ş. · INV-2026-00148", description: "30+ gün gecikme; iki hatırlatmaya yanıt yok", recommended: "Hesap yöneticisi müşteriyle ödeme planını görüşmeli; yeni sevkiyatları durdurun.", daysAgo: 17, payload: { days_overdue: 48, outstanding: 265000, currency: "TRY", draft_id: escalationDraft.id } }),
+    A({ customer: 7, invoice: "INV-2026-00168", type: "ESCALATION", status: "NEEDS_HUMAN", severity: "CRITICAL", title: "Karadeniz Mobilya San. A.Ş.: İtiraz", description: "Müşteri faturaya itiraz ediyor · Ürün / sevkiyat sorunu bildirildi", recommended: "Hasar tutanağını operasyonla doğrulayıp müşteriyle mutabakat yapın.", daysAgo: 19, payload: { intent: "DISPUTE", invoice_number: "INV-2026-00168", outstanding: 142000, currency: "TRY", draft_id: karadenizDraft.id } }),
     A({ customer: 5, invoice: "INV-2026-00186", type: "REPLY_CLASSIFIED", status: "COMPLETED", severity: "INFO", title: "Reply classified: Nordwind Handel → Says payment made", description: "Payment sent yesterday (88%, rules)", daysAgo: 1 }),
     A({ customer: 5, invoice: "INV-2026-00186", type: "PAYMENT_MATCH_SUGGESTED", status: "PENDING_APPROVAL", severity: "INFO", title: "Eşleşme önerildi: €34.175,00 → INV-2026-00186", description: "Nordwind Handel GmbH · 75%", daysAgo: 1, payload: { payment_id: payments.find((p) => p.status === "UNMATCHED")?.id, confidence: 0.75 } }),
     A({ customer: 4, invoice: "INV-2026-00170", type: "PAYMENT_MATCHED", status: "COMPLETED", severity: "SUCCESS", title: "Ödeme eşleştirildi: ₺90.000,00 → INV-2026-00170", description: "Anadolu Otomotiv Yedek Parça (kısmi)", daysAgo: 4 }),
@@ -311,7 +343,17 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
   for (const c of customers) {
     const fin = computeCustomerFinancials(c, allInvoices, payments, allPromises, asOf);
     const r = computeRiskScore(fin, { creditLimit: c.credit_limit, locale: "tr" });
-    await store.insert("risk_scores", { customer_id: c.id, score: r.score, level: r.level, reasons: r.reasons, recommendation: r.recommendation, factors: r.factors, computed_at: nowIso });
+    // Six months of plausible history ending at today's score, so the trend chart is meaningful.
+    const drift = [18, 12, 9, 6, 3, 0];
+    const history = drift.map((back, idx) => {
+      const dt = new Date(`${asOf}T00:00:00Z`);
+      dt.setUTCDate(1);
+      dt.setUTCMonth(dt.getUTCMonth() - (drift.length - 1 - idx));
+      const score = Math.max(0, Math.min(100, Math.round(r.score - back * (r.score >= 50 ? 1 : -0.4))));
+      return { month: dt.toISOString().slice(0, 7), score, grade: gradeForScore(score), note: null as string | null };
+    });
+    for (let i = 1; i < history.length; i++) if (history[i].grade !== history[i - 1].grade) history[i].note = `${history[i - 1].grade} → ${history[i].grade}`;
+    await store.insert("risk_scores", { customer_id: c.id, score: r.score, level: r.level, grade: r.grade, reasons: r.reasons, facts: r.facts, recommendation: r.recommendation, factors: r.factors, history, computed_at: nowIso });
   }
 
   await store.insert("audit_logs", { user_id: opts.ownerUserId, action: "demo.seeded", entity_type: "organization", entity_id: org.id, details: { customers: customers.length, invoices: invoices.length, payments: payments.length } });

@@ -7,7 +7,7 @@ export const metadata = { title: "Sign up" };
 
 export default async function SignupPage() {
   const user = await getSessionUser();
-  if (user) redirect(user.organization_id ? "/dashboard" : "/onboarding");
+  if (user) redirect(user.organization_id ? "/inbox" : "/onboarding");
   const { t, locale } = await getT();
   return <SignupForm t={t} locale={locale} />;
 }

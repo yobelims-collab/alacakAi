@@ -2,17 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, CreditCard, FileText, LayoutDashboard, MessageSquare, Settings, ShieldAlert, Users } from "lucide-react";
+import { BarChart3, Bot, CreditCard, FileText, Inbox, MessageSquare, Settings, Users } from "lucide-react";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
 export function navItems(t: Dictionary, counts: { attention: number }) {
   return [
-    { href: "/dashboard", label: t.nav.dashboard, icon: LayoutDashboard },
-    { href: "/attention", label: t.nav.attention, icon: ShieldAlert, badge: counts.attention },
+    { href: "/inbox", label: t.nav.inbox, icon: Inbox, badge: counts.attention },
     { href: "/customers", label: t.nav.customers, icon: Users },
     { href: "/invoices", label: t.nav.invoices, icon: FileText },
     { href: "/payments", label: t.nav.payments, icon: CreditCard },
+    { href: "/dashboard", label: t.nav.reports, icon: BarChart3 },
     { href: "/communications", label: t.nav.communications, icon: MessageSquare },
     { href: "/ai-actions", label: t.nav.aiActions, icon: Bot },
     { href: "/settings", label: t.nav.settings, icon: Settings },

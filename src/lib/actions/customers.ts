@@ -25,7 +25,7 @@ export async function createCustomerAction(_prev: FormState, formData: FormData)
   const parsed = customerSchema.safeParse(fromForm(formData));
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
-  const customer = await ctx.store.insert("customers", { ...parsed.data, account_manager_id: null });
+  const customer = await ctx.store.insert("customers", { ...parsed.data, account_manager_id: null, shipments_on_hold: false });
   await audit(ctx.store, { user_id: ctx.user.id, action: "customer.created", entity_type: "customer", entity_id: customer.id });
   await refreshCustomerRisk(ctx, customer);
   revalidatePath("/customers");

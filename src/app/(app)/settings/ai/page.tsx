@@ -1,5 +1,7 @@
 import { Bot, ShieldCheck } from "lucide-react";
 import { AiForm } from "@/components/settings/ai-form";
+import { GradeRulesForm } from "@/components/settings/grade-rules-form";
+import { defaultGradeRules } from "@/lib/ai/risk-analyzer";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AI_AGENT_RULES, AI_AGENT_RULES_TR } from "@/lib/ai/system-prompt";
@@ -22,7 +24,18 @@ export default async function AiSettingsPage() {
   return (
     <>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
-        <AiForm org={org} t={t} locale={locale} />
+        <div className="flex flex-col gap-4">
+          <AiForm org={org} t={t} locale={locale} />
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.grade.rulesTitle}</CardTitle>
+              <CardDescription>{t.grade.rulesHint}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <GradeRulesForm rules={{ ...defaultGradeRules(locale), ...(org.grade_rules ?? {}) }} t={t} />
+            </CardContent>
+          </Card>
+        </div>
         <div className="flex flex-col gap-4">
           <Card>
             <CardHeader>

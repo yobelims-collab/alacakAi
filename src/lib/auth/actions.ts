@@ -59,13 +59,13 @@ export async function signInAction(_prev: ActionState, formData: FormData): Prom
     const user = getMemoryDatabase().users.get(email.toLowerCase());
     if (!user || user.password !== password) return { error: "E-posta veya şifre hatalı / wrong email or password" };
     (await cookies()).set(DEMO_SESSION_COOKIE, signDemoSession(user.id), COOKIE_OPTS);
-    redirect("/dashboard");
+    redirect("/inbox");
   }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
-  redirect("/dashboard");
+  redirect("/inbox");
 }
 
 /** One-click entry into the seeded demo company (demo mode only). */
@@ -75,7 +75,7 @@ export async function demoLoginAction(): Promise<void> {
   const user = getMemoryDatabase().users.get(DEMO_EMAIL);
   if (!user || user.password !== DEMO_PASSWORD) redirect("/login");
   (await cookies()).set(DEMO_SESSION_COOKIE, signDemoSession(user.id), COOKIE_OPTS);
-  redirect("/dashboard");
+  redirect("/inbox");
 }
 
 export async function signOutAction(): Promise<void> {
@@ -91,7 +91,7 @@ export async function signOutAction(): Promise<void> {
 export async function createOrganizationAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
-  if (user.organization_id) redirect("/dashboard");
+  if (user.organization_id) redirect("/inbox");
   const parsed = createOrganizationSchema.safeParse({
     name: formData.get("name"),
     default_currency: formData.get("default_currency") ?? "TRY",
@@ -128,5 +128,5 @@ export async function createOrganizationAction(_prev: ActionState, formData: For
     const store = await storeForOrganization(orgId);
     await seedDemoData(store, { ownerUserId: user.id });
   }
-  redirect("/dashboard");
+  redirect("/inbox");
 }

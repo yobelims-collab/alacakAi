@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireContext } from "@/lib/db";
 import { resetDemoData } from "@/lib/db/demo-seed";
-import { approveCommunication, draftReminder, processInboundReply, rejectCommunication, resolveAction, runCollectionCycle, setInvoiceStatus, type CycleSummary } from "@/lib/services/collection-service";
+import { approveCommunication, approveMany, decideAction, draftReminder, processInboundReply, rejectCommunication, resolveAction, runCollectionCycle, setInvoiceStatus, snoozeCommunication, type CycleSummary, type InboxDecision } from "@/lib/services/collection-service";
+import { addDays, today } from "@/lib/domain/dates";
 import { CHANNELS, COLLECTION_STAGES, TONES } from "@/lib/types";
 
 export interface ActionResult<T = undefined> {
@@ -14,7 +15,7 @@ export interface ActionResult<T = undefined> {
 }
 
 function revalidateAll() {
-  for (const p of ["/dashboard", "/attention", "/customers", "/invoices", "/payments", "/communications", "/ai-actions"]) revalidatePath(p, "layout");
+  for (const p of ["/inbox", "/dashboard", "/attention", "/customers", "/invoices", "/payments", "/communications", "/ai-actions"]) revalidatePath(p, "layout");
 }
 
 function fail(err: unknown): ActionResult<never> {
@@ -32,13 +33,13 @@ export async function runCycleAction(): Promise<ActionResult<CycleSummary>> {
   }
 }
 
-const approveSchema = z.object({ id: z.string().min(1), subject: z.string().trim().min(3).max(200).optional(), body: z.string().trim().min(20).max(2500).optional() });
+const approveSchema = z.object({ id: z.string().min(1), subject: z.string().trim().min(3).max(200).optional(), body: z.string().trim().min(20).max(2500).optional(), variant: z.enum(["soft", "firm"]).optional() });
 
-export async function approveCommunicationAction(input: { id: string; subject?: string; body?: string }): Promise<ActionResult<{ status: string }>> {
+export async function approveCommunicationAction(input: { id: string; subject?: string; body?: string; variant?: "soft" | "firm" }): Promise<ActionResult<{ status: string }>> {
   try {
     const parsed = approveSchema.parse(input);
     const ctx = await requireContext();
-    const comm = await approveCommunication(ctx, parsed.id, { subject: parsed.subject, body: parsed.body });
+    const comm = await approveCommunication(ctx, parsed.id, { subject: parsed.subject, body: parsed.body, variant: parsed.variant });
     revalidateAll();
     return { ok: true, data: { status: comm.status } };
   } catch (e) {
@@ -114,6 +115,43 @@ export async function resetDemoAction(): Promise<ActionResult> {
     const ctx = await requireContext();
     if (!ctx.org.is_demo && !ctx.demo) return { ok: false, error: "Only available for demo organizations" };
     await resetDemoData(ctx.store, ctx.user.id);
+    revalidateAll();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function approveManyAction(ids: string[]): Promise<ActionResult<{ sent: number; failed: number }>> {
+  try {
+    const parsed = z.array(z.string().min(1)).min(1).max(100).parse(ids);
+    const ctx = await requireContext();
+    const r = await approveMany(ctx, parsed);
+    revalidateAll();
+    return { ok: true, data: { sent: r.filter((x) => x.ok).length, failed: r.filter((x) => !x.ok).length } };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function snoozeCommunicationAction(id: string, days = 3): Promise<ActionResult> {
+  try {
+    const ctx = await requireContext();
+    await snoozeCommunication(ctx, z.string().min(1).parse(id), addDays(today(), z.number().int().min(1).max(30).parse(days)));
+    revalidateAll();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const decisionSchema = z.object({ id: z.string().min(1), decision: z.enum(["APPROVE_EXTENSION", "HOLD_SHIPMENTS", "RELEASE_SHIPMENTS", "HANDLE_MYSELF", "RESOLVE"]), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() });
+
+export async function decideActionAction(input: { id: string; decision: InboxDecision; date?: string }): Promise<ActionResult> {
+  try {
+    const parsed = decisionSchema.parse(input);
+    const ctx = await requireContext();
+    await decideAction(ctx, parsed.id, parsed.decision, { date: parsed.date });
     revalidateAll();
     return { ok: true };
   } catch (e) {

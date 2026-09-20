@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hasSupabase } from "@/lib/env";
 import { refreshSupabaseSession } from "@/lib/supabase/proxy-client";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/customers", "/invoices", "/payments", "/communications", "/ai-actions", "/attention", "/settings", "/onboarding"];
+const PROTECTED_PREFIXES = ["/inbox", "/dashboard", "/customers", "/invoices", "/payments", "/communications", "/ai-actions", "/attention", "/settings", "/onboarding"];
 const DEMO_COOKIE = "alacakai_demo_session";
 
 /**

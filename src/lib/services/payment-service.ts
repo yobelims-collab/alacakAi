@@ -61,6 +61,8 @@ export async function suggestForPayment(ctx: AppContext, payment: Payment): Prom
       payload: { payment_id: payment.id, confidence: best.confidence, reasons: best.reasons },
       resolved_at: null,
       resolved_by: null,
+      routed_to: null,
+      decision: null,
     });
   }
   return updated;
@@ -106,7 +108,7 @@ export async function matchPayment(ctx: AppContext, paymentId: string, invoiceId
   for (const p of await store.list("payment_promises", { where: { invoice_id: invoice.id, status: "ACTIVE" } })) {
     if (fullyPaid || (p.amount !== null && applied >= p.amount - 0.005)) {
       await store.update("payment_promises", p.id, { status: "KEPT", resolved_at: now });
-      await store.insert("ai_actions", { customer_id: invoice.customer_id, invoice_id: invoice.id, communication_id: null, type: "PROMISE_KEPT", status: "COMPLETED", severity: "SUCCESS", title: `${ctx.t.actionType.PROMISE_KEPT}: ${invoice.invoice_number}`, description: null, recommended_action: null, payload: { promise_id: p.id }, resolved_at: null, resolved_by: null });
+      await store.insert("ai_actions", { customer_id: invoice.customer_id, invoice_id: invoice.id, communication_id: null, type: "PROMISE_KEPT", status: "COMPLETED", severity: "SUCCESS", title: `${ctx.t.actionType.PROMISE_KEPT}: ${invoice.invoice_number}`, description: null, recommended_action: null, payload: { promise_id: p.id }, resolved_at: null, resolved_by: null, routed_to: null, decision: null });
     }
   }
   // Close pending suggestion actions for this payment.
@@ -133,6 +135,8 @@ export async function matchPayment(ctx: AppContext, paymentId: string, invoiceId
     payload: { payment_id: payment.id, applied, fully_paid: fullyPaid },
     resolved_at: null,
     resolved_by: null,
+    routed_to: null,
+    decision: null,
   });
   await audit(store, { user_id: ctx.user.id, action: "payment.matched", entity_type: "payment", entity_id: payment.id, details: { invoice_id: invoice.id, applied, fully_paid: fullyPaid } });
   if (customer) await refreshCustomerRisk(ctx, customer);

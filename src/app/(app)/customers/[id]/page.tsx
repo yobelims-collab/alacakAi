@@ -2,7 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Globe, Languages, Lightbulb, Pencil } from "lucide-react";
 import { DescriptionList, PageHeader } from "@/components/app/page-header";
-import { InvoiceStatusBadge, PaymentStatusBadge, PromiseStatusBadge, RiskBadge } from "@/components/app/status-badge";
+import { GradeBadge } from "@/components/app/grade-badge";
+import { GradeHistoryChart } from "@/components/charts/grade-history";
+import { InvoiceStatusBadge, PaymentStatusBadge, PromiseStatusBadge } from "@/components/app/status-badge";
 import { CommunicationList } from "@/components/customers/communication-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +26,7 @@ const LABELS = {
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await requireContext();
-  const { t, locale } = ctx;
+  const { t, locale, org } = ctx;
   const L = LABELS[locale];
   const d = await loadCustomerDetail(ctx, id);
   if (!d) notFound();
@@ -61,7 +63,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       />
 
       <div className="-mt-3 mb-6 flex flex-wrap items-center gap-2">
-        {risk ? <RiskBadge level={risk.level} score={risk.score} t={t} /> : <Badge variant="neutral">{t.customers.risk}: —</Badge>}
+        <GradeBadge grade={risk?.grade} t={t} withLabel onHold={c.shipments_on_hold} />
         <Badge variant="neutral">
           <Languages /> {c.preferred_language === "tr" ? t.common.turkish : t.common.english}
         </Badge>
@@ -122,28 +124,35 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <CardContent className="flex flex-col gap-4">
                 {risk ? (
                   <div className="rounded-lg border bg-muted/30 p-4">
-                    <div className="flex items-end justify-between gap-2">
-                      <p className="text-3xl font-semibold tabular tracking-tight">
-                        {risk.score}
-                        <span className="text-base font-normal text-muted-foreground">/100</span>
-                      </p>
-                      <RiskBadge level={risk.level} t={t} />
-                    </div>
-                    {risk.reasons.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t.customers.riskReasons}</p>
-                        <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm">
-                          {risk.reasons.map((r) => (
-                            <li key={r}>{r}</li>
-                          ))}
-                        </ul>
+                    <div className="flex items-center gap-3">
+                      <GradeBadge grade={risk.grade} t={t} size="lg" onHold={c.shipments_on_hold} />
+                      <div>
+                        <p className="text-base font-semibold">{t.grade[risk.grade]}</p>
+                        <p className="text-xs text-muted-foreground">{t.grade.title} · {risk.score}/100 · {formatDate(risk.computed_at, locale)}</p>
                       </div>
-                    )}
+                    </div>
+                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800">{t.grade.rule}</p>
+                      <p className="mt-0.5 text-sm text-amber-900">{org.grade_rules?.[risk.grade] ?? "—"}</p>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t.grade.facts}</p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-4 text-sm">
+                        {(risk.facts?.length ? risk.facts : risk.reasons).map((r) => (
+                          <li key={r}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
                     <div className="mt-3">
                       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t.customers.riskRecommendation}</p>
                       <p className="mt-1 text-sm">{risk.recommendation}</p>
                     </div>
-                    <p className="mt-3 text-[11px] text-muted-foreground">{formatDate(risk.computed_at, locale)}</p>
+                    {risk.history?.length > 1 && (
+                      <div className="mt-3">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t.grade.history}</p>
+                        <GradeHistoryChart history={risk.history} locale={locale} />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">{L.noRisk}</p>
@@ -157,7 +166,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                   ))}
                   {d.insights.length === 0 && <li className="text-sm text-muted-foreground">{L.noInsights}</li>}
                 </ul>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">{t.customers.riskDisclaimer}</p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">{t.grade.disclaimer}</p>
               </CardContent>
             </Card>
           </div>

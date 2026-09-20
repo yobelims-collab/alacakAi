@@ -3,7 +3,8 @@ import { ArrowRight } from "lucide-react";
 import { AttentionList } from "@/components/app/attention-list";
 import { PageHeader, StatCard } from "@/components/app/page-header";
 import { RunCycleButton } from "@/components/app/run-cycle-button";
-import { InvoiceStatusBadge, RiskBadge, SeverityIcon } from "@/components/app/status-badge";
+import { GradeBadge } from "@/components/app/grade-badge";
+import { InvoiceStatusBadge, SeverityIcon } from "@/components/app/status-badge";
 import { AgingChart, CollectedVsOutstandingChart, ReceivablesChart } from "@/components/charts/dashboard-charts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,7 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PageHeader title={t.dashboard.title} subtitle={`${t.dashboard.subtitle} · ${t.dashboard.reportingIn}: ${rc}`} actions={<RunCycleButton t={t} />} />
+      <PageHeader title={t.nav.reports} subtitle={`${t.dashboard.subtitle} · ${t.dashboard.reportingIn}: ${rc}`} actions={<RunCycleButton t={t} />} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatCard label={t.dashboard.totalReceivables} value={money(m.totalReceivables)} hint={`${m.openCount} ${t.dashboard.openInvoices}`} />
@@ -78,7 +79,7 @@ export default async function DashboardPage() {
                   <TableHead className="text-right">{t.common.amount}</TableHead>
                   <TableHead>{t.invoices.dueDate}</TableHead>
                   <TableHead>{t.invoices.daysOverdue}</TableHead>
-                  <TableHead>{t.customers.risk}</TableHead>
+                  <TableHead>{t.grade.title}</TableHead>
                   <TableHead className="pr-5">{t.common.status}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -96,7 +97,7 @@ export default async function DashboardPage() {
                     <TableCell className="whitespace-nowrap tabular">
                       <span className={inv.days_overdue > 30 ? "font-semibold text-red-700" : inv.days_overdue > 7 ? "text-orange-700" : ""}>{inv.days_overdue} {t.common.daysOverdue}</span>
                     </TableCell>
-                    <TableCell>{inv.risk ? <RiskBadge level={inv.risk.level} t={t} /> : "—"}</TableCell>
+                    <TableCell><GradeBadge grade={inv.risk?.grade} t={t} onHold={inv.customer.shipments_on_hold} /></TableCell>
                     <TableCell className="pr-5"><InvoiceStatusBadge status={inv.effective_status} t={t} /></TableCell>
                   </TableRow>
                 ))}
@@ -129,7 +130,7 @@ export default async function DashboardPage() {
               <CardDescription>{data.attention.length}</CardDescription>
             </div>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/attention">{t.dashboard.viewAll} <ArrowRight /></Link>
+              <Link href="/inbox">{t.dashboard.viewAll} <ArrowRight /></Link>
             </Button>
           </CardHeader>
           <CardContent>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { EmptyState, PageHeader } from "@/components/app/page-header";
-import { RiskBadge } from "@/components/app/status-badge";
+import { GradeBadge } from "@/components/app/grade-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,7 +91,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   <TableHead className="text-right">{t.customers.overdue}</TableHead>
                   <TableHead className="text-right">{t.customers.avgDelay}</TableHead>
                   <TableHead className="text-right">{t.customers.reliability}</TableHead>
-                  <TableHead>{t.customers.risk}</TableHead>
+                  <TableHead>{t.grade.title}</TableHead>
                   <TableHead>{t.customers.lastPayment}</TableHead>
                   <TableHead className="pr-5">{t.customers.nextExpected}</TableHead>
                 </TableRow>
@@ -125,7 +125,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                       <span className={reliability < 40 ? "font-semibold text-red-700" : reliability < 70 ? "text-orange-700" : "text-emerald-700"}>{reliability}</span>
                       <span className="text-muted-foreground">/100</span>
                     </TableCell>
-                    <TableCell>{risk ? <RiskBadge level={risk.level} score={risk.score} t={t} /> : "—"}</TableCell>
+                    <TableCell><GradeBadge grade={risk?.grade} t={t} withLabel onHold={c.shipments_on_hold} /></TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(f.lastPaymentDate, locale)}</TableCell>
                     <TableCell className="pr-5 text-muted-foreground">{formatDate(f.nextExpectedPayment, locale)}</TableCell>
                   </TableRow>

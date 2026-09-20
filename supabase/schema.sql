@@ -28,7 +28,9 @@ create table if not exists public.organizations (
   ai_signature text,
   sender_name text,
   sender_email text,
-  whatsapp_number text
+  whatsapp_number text,
+  grade_rules jsonb not null default '{}'::jsonb,
+  approval_amount_threshold numeric not null default 250000
 );
 
 create table if not exists public.profiles (
@@ -56,7 +58,8 @@ create table if not exists public.customers (
   credit_limit numeric,
   currency text not null default 'TRY',
   notes text,
-  account_manager_id uuid
+  account_manager_id uuid,
+  shipments_on_hold boolean not null default false
 );
 create index if not exists customers_org_idx on public.customers(organization_id);
 
@@ -152,7 +155,12 @@ create table if not exists public.communications (
   sent_at timestamptz,
   provider_message_id text,
   next_action_at date,
-  next_action_note text
+  next_action_note text,
+  in_reply_to uuid,
+  alternatives jsonb,
+  snoozed_until date,
+  routed_to text,
+  approval_reason text
 );
 create index if not exists communications_org_idx on public.communications(organization_id);
 create index if not exists communications_customer_idx on public.communications(customer_id);
@@ -172,7 +180,9 @@ create table if not exists public.ai_actions (
   recommended_action text,
   payload jsonb,
   resolved_at timestamptz,
-  resolved_by uuid
+  resolved_by uuid,
+  routed_to text,
+  decision text
 );
 create index if not exists ai_actions_org_idx on public.ai_actions(organization_id, created_at desc);
 
@@ -187,6 +197,9 @@ create table if not exists public.risk_scores (
   recommendation text not null default '',
   factors jsonb not null default '{}'::jsonb,
   computed_at timestamptz not null default now(),
+  grade text not null default 'C' check (grade in ('A','B','C','D','E')),
+  facts jsonb not null default '[]'::jsonb,
+  history jsonb not null default '[]'::jsonb,
   unique (organization_id, customer_id)
 );
 
@@ -202,7 +215,9 @@ create table if not exists public.automation_rules (
   second_reminder_days int not null default 7,
   escalation_days int not null default 30,
   channels jsonb not null default '["EMAIL"]'::jsonb,
-  require_approval boolean not null default true
+  require_approval boolean not null default true,
+  auto_send_pre_due boolean not null default true,
+  sales_involved_after_days int not null default 14
 );
 create index if not exists automation_rules_org_idx on public.automation_rules(organization_id);
 
@@ -232,6 +247,23 @@ create table if not exists public.audit_logs (
   details jsonb
 );
 create index if not exists audit_logs_org_idx on public.audit_logs(organization_id, created_at desc);
+
+-- Upgrades for databases created before these columns existed (idempotent).
+alter table public.organizations add column if not exists grade_rules jsonb not null default '{}'::jsonb;
+alter table public.organizations add column if not exists approval_amount_threshold numeric not null default 250000;
+alter table public.customers add column if not exists shipments_on_hold boolean not null default false;
+alter table public.communications add column if not exists in_reply_to uuid;
+alter table public.communications add column if not exists alternatives jsonb;
+alter table public.communications add column if not exists snoozed_until date;
+alter table public.communications add column if not exists routed_to text;
+alter table public.communications add column if not exists approval_reason text;
+alter table public.ai_actions add column if not exists routed_to text;
+alter table public.ai_actions add column if not exists decision text;
+alter table public.risk_scores add column if not exists grade text not null default 'C';
+alter table public.risk_scores add column if not exists facts jsonb not null default '[]'::jsonb;
+alter table public.risk_scores add column if not exists history jsonb not null default '[]'::jsonb;
+alter table public.automation_rules add column if not exists auto_send_pre_due boolean not null default true;
+alter table public.automation_rules add column if not exists sales_involved_after_days int not null default 14;
 
 -- ---------------------------------------------------------------------------
 -- Tenant helper + organization creation (the only way a user obtains an organization)

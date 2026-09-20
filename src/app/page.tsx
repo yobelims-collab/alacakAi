@@ -270,7 +270,7 @@ export default async function LandingPage() {
             <LanguageSwitcher locale={locale} />
             {signedIn ? (
               <Button asChild size="sm" variant="brand">
-                <Link href="/dashboard">{c.nav.dashboard} <ArrowRight /></Link>
+                <Link href="/inbox">{c.nav.dashboard} <ArrowRight /></Link>
               </Button>
             ) : (
               <>

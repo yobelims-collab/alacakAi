@@ -89,6 +89,13 @@ export type Urgency = (typeof URGENCIES)[number];
 export const RISK_LEVELS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type RiskLevel = (typeof RISK_LEVELS)[number];
 
+/** Customer rating letter shown everywhere in the UI. A = pays on time … E = stop list. */
+export const GRADES = ["A", "B", "C", "D", "E"] as const;
+export type Grade = (typeof GRADES)[number];
+
+/** Who has to look at an item in the inbox. */
+export type Audience = "FINANCE" | "SALES" | "BOTH";
+
 export const AI_ACTION_TYPES = [
   "REMINDER_DRAFTED",
   "REMINDER_SENT",
@@ -152,6 +159,10 @@ export interface Organization extends BaseRow {
   sender_name: string | null;
   sender_email: string | null;
   whatsapp_number: string | null;
+  /** Company rule shown next to each rating letter (what a new employee should do). */
+  grade_rules: Record<Grade, string>;
+  /** Amount (reporting currency) above which even pre-due reminders need a human. */
+  approval_amount_threshold: number;
 }
 
 export interface Profile extends OrgRow {
@@ -173,6 +184,8 @@ export interface Customer extends OrgRow {
   currency: Currency;
   notes: string | null;
   account_manager_id: string | null;
+  /** Human decision: no new shipments until cleared. */
+  shipments_on_hold: boolean;
 }
 
 export interface CustomerContact extends OrgRow {
@@ -264,6 +277,15 @@ export interface Communication extends OrgRow {
   provider_message_id: string | null;
   next_action_at: string | null;
   next_action_note: string | null;
+  /** For AI drafts that answer a customer message: id of the inbound communication. */
+  in_reply_to: string | null;
+  /** Two alternative wordings the human can pick from (decision cards). */
+  alternatives: { soft: { subject: string; body: string }; firm: { subject: string; body: string } } | null;
+  /** Hidden from the inbox until this date. */
+  snoozed_until: string | null;
+  routed_to: Audience | null;
+  /** Reason the draft needs a human (null when it is a routine reminder). */
+  approval_reason: string | null;
 }
 
 export interface AiAction extends OrgRow {
@@ -279,15 +301,29 @@ export interface AiAction extends OrgRow {
   payload: Record<string, unknown> | null;
   resolved_at: string | null;
   resolved_by: string | null;
+  routed_to: Audience | null;
+  /** Human decision taken on a NEEDS_HUMAN card. */
+  decision: string | null;
+}
+
+export interface RiskHistoryPoint {
+  month: string; // YYYY-MM
+  score: number;
+  grade: Grade;
+  note: string | null;
 }
 
 export interface RiskScore extends OrgRow {
   customer_id: string;
   score: number;
   level: RiskLevel;
+  grade: Grade;
   reasons: string[];
+  /** Plain-language facts for a new employee ("Pays 12 days late on average"). */
+  facts: string[];
   recommendation: string;
   factors: Record<string, number>;
+  history: RiskHistoryPoint[];
   computed_at: string;
 }
 
@@ -301,6 +337,10 @@ export interface AutomationRule extends OrgRow {
   escalation_days: number;
   channels: Channel[];
   require_approval: boolean;
+  /** The only thing the AI sends on its own: reminders before the due date. */
+  auto_send_pre_due: boolean;
+  /** From this many days overdue the account manager (sales) is looped in. */
+  sales_involved_after_days: number;
 }
 
 export interface BankTransaction extends OrgRow {
