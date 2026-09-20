@@ -15,11 +15,11 @@ export function GradeHistoryChart({ history, locale }: { history: RiskHistoryPoi
   return (
     <ResponsiveContainer width="100%" height={120}>
       <BarChart data={history} margin={{ top: 4, right: 4, left: 0, bottom: 0 }} barCategoryGap="30%">
-        <XAxis dataKey="month" tickFormatter={(m) => monthLabel(String(m), locale)} tick={{ fontSize: 11, fill: "#6b7280" }} axisLine={false} tickLine={false} />
+        <XAxis dataKey="month" tickFormatter={(m) => monthLabel(String(m), locale)} tick={{ fontSize: 11, fill: "var(--chart-axis)" }} axisLine={false} tickLine={false} />
         <YAxis domain={[0, 100]} hide />
         <Tooltip
-          cursor={{ fill: "#f8fafc" }}
-          contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb" }}
+          cursor={{ fill: "var(--accent)" }}
+          contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--popover)", color: "var(--popover-foreground)" }}
           formatter={(v, _n, item) => [`${v}/100 · ${(item.payload as RiskHistoryPoint).grade}${(item.payload as RiskHistoryPoint).note ? ` (${(item.payload as RiskHistoryPoint).note})` : ""}`, ""]}
           labelFormatter={(l) => monthLabel(String(l), locale)}
         />

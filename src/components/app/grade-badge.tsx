@@ -5,9 +5,9 @@ import { cn } from "@/lib/utils";
 
 const GRADE_STYLE: Record<Grade, string> = {
   A: "bg-emerald-600 text-white",
-  B: "bg-emerald-100 text-emerald-800 border border-emerald-200",
-  C: "bg-amber-100 text-amber-800 border border-amber-200",
-  D: "bg-orange-100 text-orange-800 border border-orange-200",
+  B: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-900",
+  C: "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-900",
+  D: "bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200 border border-orange-200 dark:border-orange-900",
   E: "bg-red-600 text-white",
 };
 
@@ -19,7 +19,7 @@ export function GradeBadge({ grade, t, size = "sm", withLabel = false, onHold = 
       <span className={cn("inline-grid place-items-center rounded-md font-bold tabular", size === "lg" ? "size-12 text-2xl" : "size-6 text-[12px]", GRADE_STYLE[grade])}>{grade}</span>
       {withLabel && <span className={cn("font-medium", size === "lg" ? "text-base" : "text-xs")}>{t.grade[grade]}</span>}
       {onHold && (
-        <span className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-1.5 py-0.5 text-[11px] font-medium text-red-800" title={t.grade.shipmentsOnHold}>
+        <span className="inline-flex items-center gap-1 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-1.5 py-0.5 text-[11px] font-medium text-red-800 dark:text-red-200" title={t.grade.shipmentsOnHold}>
           <PackageX className="size-3" /> {size === "lg" ? t.grade.shipmentsOnHold : null}
         </span>
       )}

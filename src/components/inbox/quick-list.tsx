@@ -70,7 +70,7 @@ export function QuickList({ items, t, locale }: { items: QuickItem[]; t: Diction
                   <>
                     <span className="font-mono text-[11px] text-muted-foreground">{q.invoice.invoice_number}</span>
                     <span className="text-sm font-semibold tabular">{formatMoney(q.outstanding, q.invoice.currency, locale)}</span>
-                    <span className={`text-xs tabular ${q.daysOverdue > 7 ? "text-orange-700" : "text-muted-foreground"}`}>{q.daysOverdue > 0 ? `${q.daysOverdue} ${t.common.daysOverdue}` : "—"}</span>
+                    <span className={`text-xs tabular ${q.daysOverdue > 7 ? "text-orange-700 dark:text-orange-300" : "text-muted-foreground"}`}>{q.daysOverdue > 0 ? `${q.daysOverdue} ${t.common.daysOverdue}` : "—"}</span>
                   </>
                 )}
                 {q.comm.stage && <StageBadge stage={q.comm.stage} t={t} />}

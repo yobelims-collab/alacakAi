@@ -50,7 +50,7 @@ export function DecisionCard({ item, t, locale }: { item: DecisionItem; t: Dicti
           <>
             <span className="font-mono text-[11px] text-muted-foreground">{invoice.invoice_number}</span>
             <span className="text-sm font-semibold tabular">{formatMoney(item.outstanding, invoice.currency, locale)}</span>
-            {item.daysOverdue > 0 && <span className="text-xs text-red-700 tabular">{item.daysOverdue} {t.common.daysOverdue}</span>}
+            {item.daysOverdue > 0 && <span className="text-xs text-red-700 dark:text-red-300 tabular">{item.daysOverdue} {t.common.daysOverdue}</span>}
           </>
         )}
         <AudienceChip audience={item.audience} t={t} />

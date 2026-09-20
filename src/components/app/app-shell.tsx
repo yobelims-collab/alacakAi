@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/types";
 import { LanguageSwitcher } from "./language-switcher";
+import { ThemeToggle } from "./theme-toggle";
 import { SidebarNav } from "./sidebar";
 
 export interface ShellProps {
@@ -44,7 +45,7 @@ export function AppShell({ t, locale, orgName, userName, userEmail, demo, counts
       <div className="rounded-md border bg-muted/40 px-2.5 py-2">
         <p className="truncate text-xs font-medium">{orgName}</p>
         {demo && (
-          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-amber-700">
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-300">
             <FlaskConical className="size-3" /> {t.common.demoMode}
           </p>
         )}
@@ -71,11 +72,12 @@ export function AppShell({ t, locale, orgName, userName, userEmail, demo, counts
             <Logo />
           </div>
           {demo && (
-            <span className="hidden items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 sm:inline-flex" title={t.common.demoModeHint}>
+            <span className="hidden items-center gap-1 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-2 py-1 text-[11px] font-medium text-amber-800 dark:text-amber-200 sm:inline-flex" title={t.common.demoModeHint}>
               <FlaskConical className="size-3" /> {t.common.demoMode}
             </span>
           )}
           <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
             <LanguageSwitcher locale={locale} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

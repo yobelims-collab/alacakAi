@@ -169,7 +169,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
                     <TableCell className="text-right tabular font-medium">{formatMoney(inv.outstanding, inv.currency, locale)}</TableCell>
                     <TableCell className="tabular">
                       {inv.days_overdue > 0 ? (
-                        <span className={inv.days_overdue > 30 ? "font-semibold text-red-700" : inv.days_overdue > 7 ? "text-orange-700" : ""}>
+                        <span className={inv.days_overdue > 30 ? "font-semibold text-red-700 dark:text-red-300" : inv.days_overdue > 7 ? "text-orange-700 dark:text-orange-300" : ""}>
                           {inv.days_overdue} {t.common.days}
                         </span>
                       ) : (

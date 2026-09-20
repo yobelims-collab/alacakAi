@@ -61,7 +61,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <InvoiceStatusBadge status={inv.effective_status} t={t} />
         <StageBadge stage={inv.collection_stage} t={t} />
         {inv.days_overdue > 0 ? (
-          <span className={`text-xs font-medium tabular ${inv.days_overdue > 30 ? "text-red-700" : inv.days_overdue > 7 ? "text-orange-700" : "text-amber-700"}`}>
+          <span className={`text-xs font-medium tabular ${inv.days_overdue > 30 ? "text-red-700 dark:text-red-300" : inv.days_overdue > 7 ? "text-orange-700 dark:text-orange-300" : "text-amber-700 dark:text-amber-300"}`}>
             {inv.days_overdue} {t.common.daysOverdue}
           </span>
         ) : inv.outstanding > 0 && inv.effective_status !== "DRAFT" ? (
@@ -88,7 +88,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 { label: t.invoices.dueDate, value: formatDate(inv.due_date, locale) },
                 { label: t.common.amount, value: money(inv.amount) },
                 { label: t.invoices.paid, value: money(inv.paid_amount) },
-                { label: t.invoices.outstanding, value: <span className={`font-semibold ${inv.outstanding > 0 && inv.days_overdue > 0 ? "text-red-700" : ""}`}>{money(inv.outstanding)}</span> },
+                { label: t.invoices.outstanding, value: <span className={`font-semibold ${inv.outstanding > 0 && inv.days_overdue > 0 ? "text-red-700 dark:text-red-300" : ""}`}>{money(inv.outstanding)}</span> },
                 { label: t.common.currency, value: inv.currency },
                 { label: t.invoices.assigned, value: inv.assigned_user_id === ctx.user.id ? ctx.user.full_name : "—" },
                 { label: L.lastReminder, value: inv.last_reminder_at ? `${formatDateTime(inv.last_reminder_at, locale)}${inv.last_reminder_stage ? ` · ${t.stage[inv.last_reminder_stage]}` : ""}` : "—" },
@@ -109,7 +109,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             {payments.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-3 rounded-md border p-2.5 text-sm">
                 <div className="min-w-0">
-                  <p className="font-medium tabular text-emerald-700">+{formatMoney(p.amount, p.currency, locale)}</p>
+                  <p className="font-medium tabular text-emerald-700 dark:text-emerald-300">+{formatMoney(p.amount, p.currency, locale)}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {formatDate(p.payment_date, locale)}
                     {p.reference && <span className="ml-1 font-mono">· {p.reference}</span>}

@@ -158,7 +158,7 @@ export function BankImport({ sample, t, locale }: { sample: string; t: Dictionar
           </CardHeader>
           <CardContent className="flex flex-col gap-4 px-0">
             {result.errors.length > 0 && (
-              <ul className="mx-5 flex flex-col gap-1 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+              <ul className="mx-5 flex flex-col gap-1 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-800 dark:text-red-200">
                 {result.errors.slice(0, 50).map((e, idx) => (
                   <li key={`${e.row}-${idx}`}>
                     <span className="font-medium tabular">
@@ -194,7 +194,7 @@ export function BankImport({ sample, t, locale }: { sample: string; t: Dictionar
                         <TableCell className="max-w-40 truncate text-muted-foreground" title={data.reference ?? undefined}>
                           {data.reference ?? "—"}
                         </TableCell>
-                        <TableCell className={`text-right tabular font-medium ${data.amount < 0 ? "text-red-700" : ""}`}>{formatMoney(data.amount, data.currency, locale)}</TableCell>
+                        <TableCell className={`text-right tabular font-medium ${data.amount < 0 ? "text-red-700 dark:text-red-300" : ""}`}>{formatMoney(data.amount, data.currency, locale)}</TableCell>
                         <TableCell className="pr-5 text-muted-foreground">{data.currency}</TableCell>
                       </TableRow>
                     ))}

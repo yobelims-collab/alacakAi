@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { ThemeProvider } from "@/components/app/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { getLocale } from "@/lib/i18n";
 import "./globals.css";
@@ -15,10 +16,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} className={`${inter.variable} ${mono.variable} h-full`}>
+    <html lang={locale} className={`${inter.variable} ${mono.variable} h-full`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col font-sans">
-        {children}
-        <Toaster />
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -24,7 +24,7 @@ export function CommunicationList({ items, t, locale, invoiceNumbers = {}, empty
           <li key={c.id}>
             <Link href={`/communications?customer=${c.customer_id}`} className="block rounded-lg border bg-card p-3.5 transition-colors hover:bg-accent/40">
               <div className="flex items-start gap-3">
-                <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full ${inbound ? "bg-violet-50 text-violet-700" : "bg-blue-50 text-blue-700"}`}>
+                <span className={`mt-0.5 grid size-7 shrink-0 place-items-center rounded-full ${inbound ? "bg-violet-50 dark:bg-violet-950/40 text-violet-700" : "bg-blue-50 dark:bg-blue-950/40 text-blue-700"}`}>
                   <DirIcon className="size-4" />
                 </span>
                 <div className="min-w-0 flex-1">

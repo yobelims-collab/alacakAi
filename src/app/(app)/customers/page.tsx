@@ -115,14 +115,14 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                       {c.payment_terms_days} {t.common.days}
                     </TableCell>
                     <TableCell className="text-right tabular font-medium">{formatMoney(f.outstanding, f.currency, locale)}</TableCell>
-                    <TableCell className={`text-right tabular ${f.overdue > 0 ? "font-medium text-red-700" : "text-muted-foreground"}`}>{formatMoney(f.overdue, f.currency, locale)}</TableCell>
+                    <TableCell className={`text-right tabular ${f.overdue > 0 ? "font-medium text-red-700 dark:text-red-300" : "text-muted-foreground"}`}>{formatMoney(f.overdue, f.currency, locale)}</TableCell>
                     <TableCell className="text-right tabular">
-                      <span className={f.averageDelayDays > 30 ? "font-semibold text-red-700" : f.averageDelayDays > 7 ? "text-orange-700" : ""}>
+                      <span className={f.averageDelayDays > 30 ? "font-semibold text-red-700 dark:text-red-300" : f.averageDelayDays > 7 ? "text-orange-700 dark:text-orange-300" : ""}>
                         {f.averageDelayDays} {t.common.days}
                       </span>
                     </TableCell>
                     <TableCell className="text-right tabular">
-                      <span className={reliability < 40 ? "font-semibold text-red-700" : reliability < 70 ? "text-orange-700" : "text-emerald-700"}>{reliability}</span>
+                      <span className={reliability < 40 ? "font-semibold text-red-700 dark:text-red-300" : reliability < 70 ? "text-orange-700 dark:text-orange-300" : "text-emerald-700 dark:text-emerald-300"}>{reliability}</span>
                       <span className="text-muted-foreground">/100</span>
                     </TableCell>
                     <TableCell><GradeBadge grade={risk?.grade} t={t} withLabel onHold={c.shipments_on_hold} /></TableCell>

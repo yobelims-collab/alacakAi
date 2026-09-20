@@ -41,7 +41,7 @@ export default async function CommunicationSettingsPage() {
         <div className="flex flex-col gap-4">
           <ProviderCard icon={Mail} title={t.settings.emailProvider} configured={email} envHint={c.emailEnv} t={t} />
           <ProviderCard icon={MessageSquare} title={t.settings.whatsappProvider} configured={whatsapp} envHint={c.whatsappEnv} t={t} />
-          {(!email || !whatsapp) && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t.communications.providerNote}</p>}
+          {(!email || !whatsapp) && <p className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-900 dark:text-amber-100">{t.communications.providerNote}</p>}
         </div>
       </div>
     </>

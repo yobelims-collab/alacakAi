@@ -194,8 +194,8 @@ function ApprovalPanel({ message, t, locale }: { message: ThreadMessage; t: Dict
       router.refresh();
     });
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-md border border-amber-200 bg-amber-50/40 p-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800">{t.communications.pendingApproval}</p>
+    <div className="mt-3 flex flex-col gap-3 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50/40 p-3">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">{t.communications.pendingApproval}</p>
       {message.channel === "EMAIL" && (
         <Field label={t.communications.subject}>
           <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} disabled={pending} />

@@ -141,9 +141,9 @@ export function CsvImport({ t, locale, sample }: { t: Dictionary; locale: Locale
             </div>
 
             {result.errors.length > 0 && (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3">
-                <p className="text-xs font-medium text-red-800">{t.invoices.csvErrors}</p>
-                <ul className="mt-1 max-h-48 space-y-0.5 overflow-auto text-xs text-red-800">
+              <div className="rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3">
+                <p className="text-xs font-medium text-red-800 dark:text-red-200">{t.invoices.csvErrors}</p>
+                <ul className="mt-1 max-h-48 space-y-0.5 overflow-auto text-xs text-red-800 dark:text-red-200">
                   {result.errors.map((e, i) => (
                     <li key={`${e.row}-${i}`}>
                       <span className="font-mono">{L.row} {e.row}:</span> {e.message}
@@ -161,9 +161,9 @@ export function CsvImport({ t, locale, sample }: { t: Dictionary; locale: Locale
             )}
 
             {result.duplicates.length > 0 && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                <p className="text-xs font-medium text-amber-800">{t.invoices.csvDuplicates}</p>
-                <p className="mt-1 font-mono text-xs text-amber-800">{result.duplicates.join(", ")}</p>
+              <div className="rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3">
+                <p className="text-xs font-medium text-amber-800 dark:text-amber-200">{t.invoices.csvDuplicates}</p>
+                <p className="mt-1 font-mono text-xs text-amber-800 dark:text-amber-200">{result.duplicates.join(", ")}</p>
               </div>
             )}
 

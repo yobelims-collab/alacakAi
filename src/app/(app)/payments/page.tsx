@@ -231,7 +231,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Sea
                     <TableCell className="max-w-40 truncate text-muted-foreground" title={tx.reference ?? undefined}>
                       {tx.reference ?? "—"}
                     </TableCell>
-                    <TableCell className={`text-right tabular font-medium ${tx.amount < 0 ? "text-red-700" : ""}`}>{formatMoney(tx.amount, tx.currency, locale)}</TableCell>
+                    <TableCell className={`text-right tabular font-medium ${tx.amount < 0 ? "text-red-700 dark:text-red-300" : ""}`}>{formatMoney(tx.amount, tx.currency, locale)}</TableCell>
                     <TableCell className="text-muted-foreground">{tx.currency}</TableCell>
                     <TableCell>
                       <PaymentStatusBadge status={tx.status} t={t} />

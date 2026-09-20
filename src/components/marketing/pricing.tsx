@@ -70,31 +70,34 @@ export function PricingGrid({ locale, currentPlanId, ctaHref = "/signup", showCt
       {PRICING_PLANS.map((plan) => {
         const current = plan.id === currentPlanId;
         return (
-          <div key={plan.id} className={cn("relative flex flex-col rounded-xl border bg-card p-6 shadow-xs", plan.highlighted && "border-primary ring-1 ring-primary/40")}>
+          <div key={plan.id} className={cn("relative flex flex-col rounded-2xl border bg-card p-6 shadow-xs sm:p-7", plan.highlighted && "border-brand/60 ring-1 ring-brand/30 shadow-[0_16px_40px_-24px_rgba(42,120,214,0.45)]")}>
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-base font-semibold tracking-tight">{plan.name}</h3>
-              {current ? <Badge variant="success">{c.current}</Badge> : plan.highlighted ? <Badge variant="default">{c.popular}</Badge> : null}
+              {current ? <Badge variant="success">{c.current}</Badge> : plan.highlighted ? <Badge variant="info">{c.popular}</Badge> : null}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{plan.description[locale]}</p>
-            <p className="mt-5 flex items-baseline gap-1">
-              <span className="text-3xl font-semibold tabular tracking-tight">{plan.price[locale]}</span>
+            <p className="mt-1.5 min-h-8 text-xs leading-relaxed text-muted-foreground">{plan.description[locale]}</p>
+            <p className="mt-6 flex items-baseline gap-1">
+              <span className="text-3xl font-semibold tabular tracking-tight sm:text-4xl">{plan.price[locale]}</span>
               {plan.period[locale] && <span className="text-sm text-muted-foreground">{plan.period[locale]}</span>}
             </p>
-            <ul className="mt-5 flex flex-1 flex-col gap-2 text-sm">
+            <div className="my-6 border-t" />
+            <ul className="flex flex-1 flex-col gap-2.5 text-sm">
               {plan.features[locale].map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                <li key={f} className="flex items-start gap-2.5">
+                  <span className="mt-0.5 grid size-4 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                    <Check className="size-2.5" />
+                  </span>
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
             {showCta && current && (
-              <Button variant="outline" className="mt-6 w-full" disabled>
+              <Button variant="outline" className="mt-8 w-full" disabled>
                 {c.current}
               </Button>
             )}
             {showCta && !current && (
-              <Button asChild variant={plan.highlighted ? "brand" : "outline"} className="mt-6 w-full">
+              <Button asChild variant={plan.highlighted ? "brand" : "outline"} className="mt-8 w-full">
                 <Link href={plan.id === "business" ? "mailto:hello@alacakai.app" : ctaHref}>{plan.id === "business" ? c.contact : c.cta}</Link>
               </Button>
             )}

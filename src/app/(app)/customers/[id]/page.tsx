@@ -96,12 +96,12 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     { label: t.customers.totalInvoiced, value: money(f.totalInvoiced) },
                     { label: t.customers.totalPaid, value: money(f.totalPaid) },
                     { label: t.customers.outstanding, value: <span className="font-semibold">{money(f.outstanding)}</span> },
-                    { label: t.customers.overdue, value: <span className={f.overdue > 0 ? "font-semibold text-red-700" : ""}>{money(f.overdue)}</span> },
+                    { label: t.customers.overdue, value: <span className={f.overdue > 0 ? "font-semibold text-red-700 dark:text-red-300" : ""}>{money(f.overdue)}</span> },
                     { label: t.customers.avgDelay, value: `${f.averageDelayDays} ${t.common.days}` },
                     { label: t.customers.overdueInvoices, value: f.overdueCount },
                     { label: t.customers.creditLimit, value: c.credit_limit ? `${money(c.credit_limit)} · ${Math.round((f.outstanding / c.credit_limit) * 100)}% ${L.usedOf}` : "—" },
                     { label: t.customers.activePromises, value: f.activePromises },
-                    { label: t.customers.brokenPromises, value: <span className={f.brokenPromises90d > 0 ? "text-red-700" : ""}>{f.brokenPromises90d}</span> },
+                    { label: t.customers.brokenPromises, value: <span className={f.brokenPromises90d > 0 ? "text-red-700 dark:text-red-300" : ""}>{f.brokenPromises90d}</span> },
                     { label: t.customers.lastPayment, value: formatDate(f.lastPaymentDate, locale) },
                     { label: t.customers.nextExpected, value: formatDate(f.nextExpectedPayment, locale) },
                     { label: t.customers.paymentTerms, value: `${c.payment_terms_days} ${t.common.days}` },
@@ -131,9 +131,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                         <p className="text-xs text-muted-foreground">{t.grade.title} · {risk.score}/100 · {formatDate(risk.computed_at, locale)}</p>
                       </div>
                     </div>
-                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3">
-                      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800">{t.grade.rule}</p>
-                      <p className="mt-0.5 text-sm text-amber-900">{org.grade_rules?.[risk.grade] ?? "—"}</p>
+                    <div className="mt-3 rounded-md border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">{t.grade.rule}</p>
+                      <p className="mt-0.5 text-sm text-amber-900 dark:text-amber-100">{org.grade_rules?.[risk.grade] ?? "—"}</p>
                     </div>
                     <div className="mt-3">
                       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t.grade.facts}</p>
@@ -209,7 +209,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatDate(h.inv.due_date, locale)}
-                          {h.inv.days_overdue > 0 && <span className="ml-1 text-xs text-red-700">+{h.inv.days_overdue}</span>}
+                          {h.inv.days_overdue > 0 && <span className="ml-1 text-xs text-red-700 dark:text-red-300">+{h.inv.days_overdue}</span>}
                         </TableCell>
                         <TableCell className="text-right tabular">{formatMoney(h.inv.amount, h.inv.currency, locale)}</TableCell>
                         <TableCell className="pr-5 text-right tabular font-medium">{formatMoney(h.inv.outstanding, h.inv.currency, locale)}</TableCell>
@@ -230,7 +230,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                           <PaymentStatusBadge status={h.pay.status} t={t} />
                         </TableCell>
                         <TableCell className="text-muted-foreground">—</TableCell>
-                        <TableCell className="text-right tabular font-medium text-emerald-700">+{formatMoney(h.pay.amount, h.pay.currency, locale)}</TableCell>
+                        <TableCell className="text-right tabular font-medium text-emerald-700 dark:text-emerald-300">+{formatMoney(h.pay.amount, h.pay.currency, locale)}</TableCell>
                         <TableCell className="pr-5 text-right text-muted-foreground">—</TableCell>
                       </TableRow>
                     ),

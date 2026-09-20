@@ -23,7 +23,7 @@ export function EmptyState({ title, description, action }: { title: string; desc
 }
 
 export function StatCard({ label, value, hint, tone = "default" }: { label: string; value: string; hint?: string; tone?: "default" | "critical" | "success" | "warning" }) {
-  const valueColor = tone === "critical" ? "text-red-700" : tone === "success" ? "text-emerald-700" : tone === "warning" ? "text-amber-700" : "text-foreground";
+  const valueColor = tone === "critical" ? "text-red-700 dark:text-red-300" : tone === "success" ? "text-emerald-700 dark:text-emerald-300" : tone === "warning" ? "text-amber-700 dark:text-amber-300" : "text-foreground";
   return (
     <div className="rounded-xl border bg-card p-4 shadow-xs">
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>

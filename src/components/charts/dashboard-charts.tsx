@@ -19,8 +19,8 @@ function monthLabel(m: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale === "tr" ? "tr-TR" : "en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${m}-01T00:00:00Z`));
 }
 
-const axisStyle = { fontSize: 11, fill: "#6b7280" };
-const tooltipStyle = { fontSize: 12, borderRadius: 8, border: "1px solid #e5e7eb", boxShadow: "0 4px 12px rgba(0,0,0,0.06)" };
+const axisStyle = { fontSize: 11, fill: "var(--chart-axis)" };
+const tooltipStyle = { fontSize: 12, borderRadius: 8, border: "1px solid var(--border)", background: "var(--popover)", color: "var(--popover-foreground)", boxShadow: "0 4px 12px rgba(0,0,0,0.12)" };
 
 export function ReceivablesChart({ data, locale, currency, labels }: { data: DashboardMetrics["receivablesSeries"]; locale: Locale; currency: Currency; labels: { outstanding: string; overdue: string } }) {
   return (
@@ -36,7 +36,7 @@ export function ReceivablesChart({ data, locale, currency, labels }: { data: Das
             <stop offset="100%" stopColor={SERIES.orange} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="#f1f5f9" />
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
         <XAxis dataKey="date" tickFormatter={(d) => shortDate(String(d), locale)} tick={axisStyle} axisLine={false} tickLine={false} minTickGap={24} />
         <YAxis tickFormatter={(v) => compact(Number(v), locale)} tick={axisStyle} axisLine={false} tickLine={false} width={48} />
         <Tooltip contentStyle={tooltipStyle} formatter={(v) => full(Number(v), locale, currency)} labelFormatter={(l) => shortDate(String(l), locale)} />
@@ -52,10 +52,10 @@ export function AgingChart({ data, locale, currency, unit }: { data: DashboardMe
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
-        <CartesianGrid vertical={false} stroke="#f1f5f9" />
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
         <XAxis dataKey="bucket" tickFormatter={(b) => `${b} ${unit}`} tick={axisStyle} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={(v) => compact(Number(v), locale)} tick={axisStyle} axisLine={false} tickLine={false} width={48} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f8fafc" }} formatter={(v, _n, item) => [`${full(Number(v), locale, currency)} · ${(item.payload as { count: number }).count}`, ""]} labelFormatter={(l) => `${l} ${unit}`} />
+        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--accent)" }} formatter={(v, _n, item) => [`${full(Number(v), locale, currency)} · ${(item.payload as { count: number }).count}`, ""]} labelFormatter={(l) => `${l} ${unit}`} />
         <Bar dataKey="amount" fill={SERIES.orange} radius={[4, 4, 0, 0]} maxBarSize={44} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>
@@ -66,10 +66,10 @@ export function CollectedVsOutstandingChart({ data, locale, currency, labels }: 
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={2} barCategoryGap="24%">
-        <CartesianGrid vertical={false} stroke="#f1f5f9" />
+        <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
         <XAxis dataKey="month" tickFormatter={(m) => monthLabel(String(m), locale)} tick={axisStyle} axisLine={false} tickLine={false} />
         <YAxis tickFormatter={(v) => compact(Number(v), locale)} tick={axisStyle} axisLine={false} tickLine={false} width={48} />
-        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "#f8fafc" }} formatter={(v) => full(Number(v), locale, currency)} labelFormatter={(l) => monthLabel(String(l), locale)} />
+        <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--accent)" }} formatter={(v) => full(Number(v), locale, currency)} labelFormatter={(l) => monthLabel(String(l), locale)} />
         <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
         <Bar dataKey="collected" name={labels.collected} fill={SERIES.aqua} radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />
         <Bar dataKey="outstanding" name={labels.outstanding} fill={SERIES.blue} radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false} />

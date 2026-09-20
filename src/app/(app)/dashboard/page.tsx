@@ -95,7 +95,7 @@ export default async function DashboardPage() {
                     <TableCell className="whitespace-nowrap text-right tabular font-medium">{formatMoney(inv.outstanding, inv.currency, locale)}</TableCell>
                     <TableCell className="whitespace-nowrap text-muted-foreground">{formatDate(inv.due_date, locale)}</TableCell>
                     <TableCell className="whitespace-nowrap tabular">
-                      <span className={inv.days_overdue > 30 ? "font-semibold text-red-700" : inv.days_overdue > 7 ? "text-orange-700" : ""}>{inv.days_overdue} {t.common.daysOverdue}</span>
+                      <span className={inv.days_overdue > 30 ? "font-semibold text-red-700 dark:text-red-300" : inv.days_overdue > 7 ? "text-orange-700 dark:text-orange-300" : ""}>{inv.days_overdue} {t.common.daysOverdue}</span>
                     </TableCell>
                     <TableCell><GradeBadge grade={inv.risk?.grade} t={t} onHold={inv.customer.shipments_on_hold} /></TableCell>
                     <TableCell className="pr-5"><InvoiceStatusBadge status={inv.effective_status} t={t} /></TableCell>

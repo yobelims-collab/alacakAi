@@ -1,4 +1,5 @@
 import { LanguageSwitcher } from "@/components/app/language-switcher";
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import { CompanyForm } from "@/components/settings/company-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireContext } from "@/lib/db";
@@ -31,6 +32,7 @@ export default async function CompanySettingsPage() {
           </CardHeader>
           <CardContent>
             <LanguageSwitcher locale={locale} />
+            <ThemeToggle />
           </CardContent>
         </Card>
         <Card>
