@@ -1,5 +1,8 @@
 "use client";
 
+import { LogoMark } from "@/components/app/logo";
+import { BorderBeam } from "@/components/magicui/border-beam";
+
 import { useEffect, useState } from "react";
 import { animate, motion, useReducedMotion, type Variants } from "motion/react";
 import { Bot, Inbox } from "lucide-react";
@@ -45,12 +48,13 @@ export function HeroPreview({ copy, locale }: { copy: LandingCopy["preview"]; lo
       transition={{ duration: 0.7, ease: EASE, delay: 0.1 }}
       aria-label={copy.dataNote}
     >
-      <div className="rounded-2xl border border-border/80 bg-muted/40 p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_24px_60px_-24px_rgba(15,23,42,0.25)] dark:bg-muted/20 dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)]">
+      <div className="relative rounded-2xl border border-border/80 bg-muted/40 p-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_24px_60px_-24px_rgba(15,23,42,0.25)] dark:bg-muted/20 dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)]">
+        {!reduce && <BorderBeam size={90} duration={9} colorFrom="var(--logo-from)" colorTo="var(--logo-to)" borderWidth={1.5} />}
         <motion.div className="overflow-hidden rounded-xl border bg-card" variants={container} initial={reduce ? false : "hidden"} animate="show">
           {/* Title bar */}
           <div className="flex items-center justify-between gap-3 border-b px-4 py-2.5">
             <div className="flex items-center gap-2">
-              <span className="grid size-5 place-items-center rounded bg-primary text-[10px] font-bold text-primary-foreground">A</span>
+              <LogoMark className="size-5" />
               <span className="text-xs font-medium">
                 {copy.title} <span className="text-muted-foreground">· {copy.demo}</span>
               </span>

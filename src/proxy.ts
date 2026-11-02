@@ -14,9 +14,16 @@ export async function proxy(request: NextRequest) {
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (hasSupabase()) {
-    const { response, signedIn } = await refreshSupabaseSession(request);
-    if (isProtected && !signedIn) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(pathname)}`, request.url));
-    return response;
+    try {
+      const { response, signedIn } = await refreshSupabaseSession(request);
+      if (isProtected && !signedIn) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(pathname)}`, request.url));
+      return response;
+    } catch (err) {
+      // Never take the whole site down because the auth service is unreachable or misconfigured;
+      // requireContext() still enforces auth on every protected page.
+      console.error("proxy: supabase session refresh failed", err);
+      return NextResponse.next();
+    }
   }
 
   if (isProtected && !request.cookies.get(DEMO_COOKIE)?.value) {

@@ -36,7 +36,7 @@ export async function sendMessage(msg: OutboundMessage): Promise<SendResult> {
 
 async function sendViaResend(msg: OutboundMessage): Promise<SendResult> {
   try {
-    const from = msg.fromEmail ? `${msg.fromName ?? "AlacakAI"} <${msg.fromEmail}>` : "AlacakAI <onboarding@resend.dev>";
+    const from = msg.fromEmail ? `${msg.fromName ?? "Alacore"} <${msg.fromEmail}>` : "Alacore <onboarding@resend.dev>";
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },

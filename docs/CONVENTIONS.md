@@ -1,4 +1,4 @@
-# AlacakAI — engineering conventions
+# Alacore — engineering conventions
 
 Read this before adding a page. It is the contract between the foundation (`src/lib`) and the UI.
 

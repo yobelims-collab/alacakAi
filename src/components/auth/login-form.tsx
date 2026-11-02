@@ -30,7 +30,7 @@ export function LoginForm({ t, locale, demo, highlightDemo }: { t: Dictionary; l
       <CardContent className="flex flex-col gap-3">
         <div className="rounded-md border bg-background px-3 py-2 font-mono text-xs">
           <p className="mb-1 font-sans text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{c.credentials}</p>
-          <p>demo@alacakai.app</p>
+          <p>demo@alacore.app</p>
           <p>demo1234</p>
         </div>
         <form action={demoLoginAction}>

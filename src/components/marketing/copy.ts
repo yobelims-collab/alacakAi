@@ -21,7 +21,7 @@ export interface PreviewRow {
 export interface LandingCopy {
   meta: { title: string; description: string };
   nav: { how: string; features: string; pricing: string; faq: string; signIn: string; start: string; inbox: string };
-  hero: { badge: string; headline: string; sub: string; demo: string; start: string; note: string };
+  hero: { badge: string; headline: string; accent: string; sub: string; demo: string; start: string; note: string };
   preview: {
     title: string;
     demo: string;
@@ -34,7 +34,7 @@ export interface LandingCopy {
     feed: { text: string; tone: FeedTone }[];
   };
   facts: string[];
-  how: { title: string; sub: string; steps: { title: string; body: string }[] };
+  how: { title: string; sub: string; steps: { title: string; body: string }[]; flow: { sources: string[]; engine: string; outputs: string[] } };
   ai: {
     badge: string;
     title: string;
@@ -71,14 +71,15 @@ export interface LandingCopy {
 
 const tr: LandingCopy = {
   meta: {
-    title: "AlacakAI — Yapay zekâ destekli B2B tahsilat asistanı",
-    description: "AlacakAI, vadesi gelen ve geciken B2B faturalarınızı takip eder, müşterilerinizle iletişim kurar ve ödeme süreçlerini sizin için yönetir.",
+    title: "Alacore — Yapay zekâ destekli B2B tahsilat asistanı",
+    description: "Alacore, vadesi gelen ve geciken B2B faturalarınızı takip eder, müşterilerinizle iletişim kurar ve ödeme süreçlerini sizin için yönetir.",
   },
   nav: { how: "Nasıl çalışır", features: "Özellikler", pricing: "Fiyatlandırma", faq: "SSS", signIn: "Giriş yap", start: "Ücretsiz Başla", inbox: "Gelen Kutusu" },
   hero: {
     badge: "AI destekli tahsilat",
     headline: "Paranızı almak için müşterilerinizi takip etmek zorunda kalmayın.",
-    sub: "AlacakAI, vadesi gelen ve geciken B2B faturalarınızı takip eder, müşterilerinizle iletişim kurar ve ödeme süreçlerini sizin için yönetir.",
+    accent: "zorunda kalmayın.",
+    sub: "Alacore, vadesi gelen ve geciken B2B faturalarınızı takip eder, müşterilerinizle iletişim kurar ve ödeme süreçlerini sizin için yönetir.",
     demo: "Demo'yu Gör",
     start: "Ücretsiz Başla",
     note: "Kredi kartı gerekmez · 2 dakikada demo",
@@ -109,6 +110,7 @@ const tr: LandingCopy = {
   },
   facts: ["Vade öncesi hatırlatmalar otomatik", "Vade sonrası her mesaj insan onayıyla", "Müşteri derecesi A–E"],
   how: {
+    flow: { sources: ["ERP / CSV", "e-Fatura", "Banka"], engine: "Alacore AI", outputs: ["E-posta", "WhatsApp", "Onay kutusu"] },
     title: "Nasıl çalışır",
     sub: "Dört adım; kararlar her adımda sizde.",
     steps: [
@@ -192,19 +194,20 @@ const tr: LandingCopy = {
     demo: "Demo'yu Gör",
     start: "Ücretsiz Başla",
   },
-  footer: { tagline: "Türk şirketleri için yapay zekâ destekli B2B tahsilat.", signIn: "Giriş", signUp: "Kayıt", privacy: "Gizlilik", rights: "© 2026 AlacakAI. Tüm hakları saklıdır." },
+  footer: { tagline: "Türk şirketleri için yapay zekâ destekli B2B tahsilat.", signIn: "Giriş", signUp: "Kayıt", privacy: "Gizlilik", rights: "© 2026 Alacore. Tüm hakları saklıdır." },
 };
 
 const en: LandingCopy = {
   meta: {
-    title: "AlacakAI — AI-powered B2B collections assistant",
-    description: "AlacakAI tracks your due and overdue B2B invoices, communicates with your customers and manages the payment process for you.",
+    title: "Alacore — AI-powered B2B collections assistant",
+    description: "Alacore tracks your due and overdue B2B invoices, communicates with your customers and manages the payment process for you.",
   },
   nav: { how: "How it works", features: "Features", pricing: "Pricing", faq: "FAQ", signIn: "Sign in", start: "Start free", inbox: "Inbox" },
   hero: {
     badge: "AI-powered collections",
     headline: "Stop chasing customers to get paid.",
-    sub: "AlacakAI tracks your due and overdue B2B invoices, communicates with your customers and manages the payment process for you.",
+    accent: "to get paid.",
+    sub: "Alacore tracks your due and overdue B2B invoices, communicates with your customers and manages the payment process for you.",
     demo: "See the demo",
     start: "Start free",
     note: "No credit card · Demo in 2 minutes",
@@ -235,6 +238,7 @@ const en: LandingCopy = {
   },
   facts: ["Pre-due reminders go out automatically", "Every post-due message is human-approved", "Customer rating A–E"],
   how: {
+    flow: { sources: ["ERP / CSV", "e-Invoice", "Bank"], engine: "Alacore AI", outputs: ["Email", "WhatsApp", "Approval inbox"] },
     title: "How it works",
     sub: "Four steps, with the decision yours at every one.",
     steps: [
@@ -318,7 +322,7 @@ const en: LandingCopy = {
     demo: "See the demo",
     start: "Start free",
   },
-  footer: { tagline: "AI-powered B2B collections for Turkish companies.", signIn: "Sign in", signUp: "Sign up", privacy: "Privacy", rights: "© 2026 AlacakAI. All rights reserved." },
+  footer: { tagline: "AI-powered B2B collections for Turkish companies.", signIn: "Sign in", signUp: "Sign up", privacy: "Privacy", rights: "© 2026 Alacore. All rights reserved." },
 };
 
 export const LANDING_COPY: Record<Locale, LandingCopy> = { tr, en };

@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/types";
 import { LanguageSwitcher } from "./language-switcher";
+import { LogoLink } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
 import { SidebarNav } from "./sidebar";
 
@@ -24,12 +25,7 @@ export interface ShellProps {
 }
 
 function Logo() {
-  return (
-    <Link href="/inbox" className="flex items-center gap-2">
-      <span className="grid size-7 place-items-center rounded-md bg-primary text-[13px] font-bold text-primary-foreground">A</span>
-      <span className="text-sm font-semibold tracking-tight">AlacakAI</span>
-    </Link>
-  );
+  return <LogoLink href="/inbox" />;
 }
 
 export function AppShell({ t, locale, orgName, userName, userEmail, demo, counts, signOut, children }: ShellProps) {

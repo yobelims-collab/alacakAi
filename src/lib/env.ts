@@ -3,8 +3,8 @@
  * re-exported to the client; `NEXT_PUBLIC_*` values are the only ones the browser sees.
  */
 export const env = {
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+  supabaseUrl: (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim().replace(/\/+$/, ""),
+  supabaseAnonKey: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   openaiApiKey: process.env.OPENAI_API_KEY ?? "",
   openaiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
@@ -18,8 +18,25 @@ export const env = {
 };
 
 /** Supabase is "configured" only when both public values exist. */
+/** Why Supabase is not used (null when it is). Shown by /api/health so a bad variable is easy to spot. */
+export function supabaseConfigProblem(): string | null {
+  if (env.forceDemo) return "DEMO_MODE=true";
+  if (!env.supabaseUrl && !env.supabaseAnonKey) return "not configured";
+  if (!env.supabaseUrl) return "NEXT_PUBLIC_SUPABASE_URL is missing";
+  if (!env.supabaseAnonKey) return "NEXT_PUBLIC_SUPABASE_ANON_KEY is missing";
+  try {
+    const u = new URL(env.supabaseUrl);
+    if (u.protocol !== "https:" && u.hostname !== "localhost" && u.hostname !== "127.0.0.1") return "NEXT_PUBLIC_SUPABASE_URL must start with https://";
+  } catch {
+    return "NEXT_PUBLIC_SUPABASE_URL is not a valid URL";
+  }
+  if (env.supabaseAnonKey.length < 20) return "NEXT_PUBLIC_SUPABASE_ANON_KEY looks too short";
+  return null;
+}
+
+/** Supabase is used only when both public values exist and look valid; otherwise the app stays in demo mode. */
 export function hasSupabase(): boolean {
-  return Boolean(env.supabaseUrl && env.supabaseAnonKey) && !env.forceDemo;
+  return supabaseConfigProblem() === null;
 }
 
 /** Demo mode = no Supabase (or DEMO_MODE=true): in-memory data, demo auth. */

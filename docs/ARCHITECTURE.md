@@ -1,6 +1,6 @@
-# AlacakAI — architecture
+# Alacore — architecture
 
-AlacakAI is an AI-assisted accounts-receivable workflow, **not** a chatbot. Every AI capability is a pure,
+Alacore is an AI-assisted accounts-receivable workflow, **not** a chatbot. Every AI capability is a pure,
 testable function whose output is validated with Zod before it can change financial state.
 
 ## Layers

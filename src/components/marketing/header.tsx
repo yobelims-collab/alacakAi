@@ -15,7 +15,7 @@ export function MarketingHeader({ copy, locale, signedIn }: { copy: LandingCopy[
     { href: "#faq", label: copy.faq },
   ];
   return (
-    <header className="sticky top-0 z-40 border-b border-border/80 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <header className="glass sticky top-0 z-40 border-b border-border/70">
       <Container className="flex h-14 items-center gap-4">
         <Wordmark />
         <nav className="ml-6 hidden items-center gap-1 md:flex" aria-label="Primary">
@@ -39,7 +39,7 @@ export function MarketingHeader({ copy, locale, signedIn }: { copy: LandingCopy[
               <Button asChild size="sm" variant="ghost" className="hidden sm:inline-flex">
                 <Link href="/login">{copy.signIn}</Link>
               </Button>
-              <Button asChild size="sm" variant="default">
+              <Button asChild size="sm" variant="brand">
                 <Link href="/signup">{copy.start}</Link>
               </Button>
             </>

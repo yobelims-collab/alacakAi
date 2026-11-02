@@ -98,7 +98,7 @@ export function PricingGrid({ locale, currentPlanId, ctaHref = "/signup", showCt
             )}
             {showCta && !current && (
               <Button asChild variant={plan.highlighted ? "brand" : "outline"} className="mt-8 w-full">
-                <Link href={plan.id === "business" ? "mailto:hello@alacakai.app" : ctaHref}>{plan.id === "business" ? c.contact : c.cta}</Link>
+                <Link href={plan.id === "business" ? "mailto:hello@alacore.app" : ctaHref}>{plan.id === "business" ? c.contact : c.cta}</Link>
               </Button>
             )}
           </div>

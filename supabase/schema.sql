@@ -1,4 +1,4 @@
--- AlacakAI — PostgreSQL schema for Supabase.
+-- Alacore — PostgreSQL schema for Supabase.
 -- Idempotent: safe to re-run in the Supabase SQL editor.
 -- Every organization-scoped table carries organization_id and is protected by Row Level Security:
 -- a user can only touch rows whose organization_id equals the organization on their own profile.

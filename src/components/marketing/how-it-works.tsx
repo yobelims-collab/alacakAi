@@ -1,5 +1,6 @@
 import { ArrowLeftRight, MessagesSquare, Radar, Upload } from "lucide-react";
 import type { LandingCopy } from "./copy";
+import { FlowDiagram } from "./flow-diagram";
 import { Container, SectionHeading } from "./primitives";
 import { Reveal } from "./reveal";
 
@@ -12,14 +13,17 @@ export function HowItWorks({ copy }: { copy: LandingCopy["how"] }) {
         <Reveal>
           <SectionHeading title={copy.title} sub={copy.sub} />
         </Reveal>
-        <div className="relative mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Reveal delay={0.05} className="mt-12">
+          <FlowDiagram flow={copy.flow} />
+        </Reveal>
+        <div className="relative mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {copy.steps.map((step, i) => {
             const Icon = ICONS[i] ?? Upload;
             return (
               <Reveal key={step.title} delay={i * 0.07} className="h-full">
                 <div className="flex h-full flex-col rounded-xl border bg-card p-6 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <span className="grid size-10 place-items-center rounded-lg bg-primary text-primary-foreground">
+                    <span className="grid size-10 place-items-center rounded-lg bg-cta-gradient text-white">
                       <Icon className="size-4" />
                     </span>
                     <span className="font-mono text-xs text-muted-foreground tabular">0{i + 1}</span>

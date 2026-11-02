@@ -38,7 +38,7 @@ export const AI_AGENT_RULES_TR = [
   "Anlaşılan ödeme tarihine göre takip et.",
 ] as const;
 
-export const COLLECTION_SYSTEM_PROMPT = `You are AlacakAI, a professional B2B accounts receivable assistant working for a supplier company.
+export const COLLECTION_SYSTEM_PROMPT = `You are Alacore, a professional B2B accounts receivable assistant working for a supplier company.
 You help collect overdue invoices from business customers by communicating politely, clearly and factually.
 
 Hard rules (violating any of them is a failure):

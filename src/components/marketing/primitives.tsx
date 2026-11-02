@@ -1,12 +1,12 @@
+import { Wordmark as BrandWordmark } from "@/components/app/logo";
 import Link from "next/link";
 import type { Grade } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <Link href="/" className={cn("flex items-center gap-2", className)} aria-label="AlacakAI">
-      <span className="grid size-7 place-items-center rounded-md bg-primary text-[13px] font-bold text-primary-foreground">A</span>
-      <span className="text-sm font-semibold tracking-tight">AlacakAI</span>
+    <Link href="/" className={cn("flex items-center gap-2", className)} aria-label="Alacore">
+      <BrandWordmark size="md" />
     </Link>
   );
 }

@@ -1,4 +1,4 @@
-# AlacakAI — rules for AI agents
+# Alacore — rules for AI agents
 
 Read `docs/CONVENTIONS.md` (how to add a page) and `docs/ARCHITECTURE.md` (how it works) first.
 This is Next.js 16: read `node_modules/next/dist/docs/` before assuming an API (proxy.ts, async params).

@@ -4,14 +4,14 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light: slate canvas, deep-navy primary, blue brand, violet AI accent */
+  /* Alacore — light: slate canvas, logo navy primary, emerald→teal brand from the "core" wordmark */
   --background: #f8fafc;
-  --foreground: #0f172a;
+  --foreground: #0f1f3a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #0f1f3a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0b1f3a;
+  --popover-foreground: #0f1f3a;
+  --primary: #0f1f3a;
   --primary-foreground: #f8fafc;
   --secondary: #f1f5f9;
   --secondary-foreground: #1e293b;
@@ -23,13 +23,19 @@
   --destructive-foreground: #fafafa;
   --border: #e2e8f0;
   --input: #cbd5e1;
-  --ring: #2a78d6;
-  --radius: 0.625rem;
-  --brand: #2a78d6;
+  --ring: #0e7490;
+  --radius: 0.75rem;
+  /* Solid brand for buttons/links (white text ≥ 5.4:1). */
+  --brand: #0b7a6c;
   --brand-foreground: #ffffff;
-  --ai: #6d5ce7;
+  /* Logo gradient (decorative / large type only) and the button-safe darker gradient. */
+  --logo-from: #2dc78a;
+  --logo-to: #0ba5c4;
+  --cta-from: #047857;
+  --cta-to: #0e7490;
+  --ai: #0e7490;
   --ai-foreground: #ffffff;
-  --series-1: #2a78d6;
+  --series-1: #0e7490;
   --series-2: #eb6834;
   --series-3: #1baf7a;
   --status-good: #008300;
@@ -59,12 +65,17 @@
   --destructive-foreground: #fafafa;
   --border: #22304a;
   --input: #2b3a55;
-  --ring: #3987e5;
-  --brand: #3987e5;
-  --brand-foreground: #ffffff;
-  --ai: #8b7cf6;
-  --ai-foreground: #ffffff;
-  --series-1: #3987e5;
+  --ring: #22b8c9;
+  /* Dark: bright brand with navy text on top (≥ 7:1). */
+  --brand: #19b99a;
+  --brand-foreground: #04121f;
+  --logo-from: #34d399;
+  --logo-to: #22d3ee;
+  --cta-from: #2dc78a;
+  --cta-to: #0ba5c4;
+  --ai: #22d3ee;
+  --ai-foreground: #04121f;
+  --series-1: #22b8c9;
   --series-2: #d95926;
   --series-3: #199e70;
   --chart-grid: #1f2b40;
@@ -93,13 +104,17 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-logo-from: var(--logo-from);
+  --color-logo-to: var(--logo-to);
+  --color-cta-from: var(--cta-from);
+  --color-cta-to: var(--cta-to);
   --color-ai: var(--ai);
   --color-ai-foreground: var(--ai-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
 }
 
@@ -122,5 +137,34 @@
   }
   .tabular {
     font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* "core" part of the wordmark and other decorative brand accents */
+  .text-logo-gradient {
+    background-image: linear-gradient(90deg, var(--logo-from), var(--logo-to));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Primary call-to-action fill (contrast-safe for white text) */
+  .bg-cta-gradient {
+    background-image: linear-gradient(90deg, var(--cta-from), var(--cta-to));
+  }
+  /* Frosted surface for sticky headers and floating previews */
+  .glass {
+    background-color: color-mix(in oklab, var(--card) 72%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

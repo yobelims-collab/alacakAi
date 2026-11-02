@@ -1,4 +1,4 @@
-# AlacakAI
+# Alacore
 
 AI-powered B2B accounts-receivable and payment-collection platform for Turkish companies.
 The AI monitors invoices, drafts stage-based reminders, classifies customer replies, records payment
@@ -17,7 +17,7 @@ npm run dev                  # http://localhost:3000
 
 Without any environment variables the app starts in **Demo Mode**: an in-memory database seeded with
 "Demo Teknoloji A.Ş." (10 customers, 30 invoices, 20 payments, promises, communication history, risk scores,
-AI actions). Open `/login` and click **Demo hesabıyla gir** (`demo@alacakai.app` / `demo1234`), or sign up and
+AI actions). Open `/login` and click **Demo hesabıyla gir** (`demo@alacore.app` / `demo1234`), or sign up and
 create your own (empty or demo-seeded) company. Demo data lives in the Node process and resets on restart.
 
 ## Environment variables

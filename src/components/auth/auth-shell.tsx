@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { FlaskConical } from "lucide-react";
 import { LanguageSwitcher } from "@/components/app/language-switcher";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { LogoLink } from "@/components/app/logo";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/types";
 
@@ -10,10 +10,7 @@ export function AuthShell({ t, locale, demo, children }: { t: Dictionary; locale
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <header className="flex h-14 items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="grid size-7 place-items-center rounded-md bg-primary text-[13px] font-bold text-primary-foreground">A</span>
-          <span className="text-sm font-semibold tracking-tight">{t.appName}</span>
-        </Link>
+        <LogoLink />
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <LanguageSwitcher locale={locale} />
@@ -32,7 +29,7 @@ export function AuthShell({ t, locale, demo, children }: { t: Dictionary; locale
           {children}
         </div>
       </main>
-      <footer className="px-4 py-4 text-center text-[11px] text-muted-foreground">© 2026 AlacakAI</footer>
+      <footer className="px-4 py-4 text-center text-[11px] text-muted-foreground">© 2026 Alacore</footer>
     </div>
   );
 }

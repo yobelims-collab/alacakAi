@@ -41,5 +41,5 @@ export async function listOrganizationIds(): Promise<string[]> {
 }
 
 function systemUser(organizationId: string): AppContext["user"] {
-  return { id: "00000000-0000-4000-8000-0000000000aa", email: "system@alacakai", full_name: "AlacakAI", organization_id: organizationId, role: "ADMIN", provider: "demo" };
+  return { id: "00000000-0000-4000-8000-0000000000aa", email: "system@alacakai", full_name: "Alacore", organization_id: organizationId, role: "ADMIN", provider: "demo" };
 }

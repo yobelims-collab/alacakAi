@@ -1,5 +1,5 @@
 /**
- * Domain types for AlacakAI.
+ * Domain types for Alacore.
  *
  * Every row type mirrors a PostgreSQL table in `supabase/schema.sql` (snake_case columns)
  * so the same shapes flow through the in-memory demo store and the Supabase store.

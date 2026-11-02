@@ -6,7 +6,7 @@ import type { Locale } from "@/lib/types";
  */
 export const dictionaries = {
   tr: {
-    appName: "AlacakAI",
+    appName: "Alacore",
     tagline: "Yapay zekâ destekli B2B tahsilat asistanı",
     nav: {
       inbox: "Gelen Kutusu",
@@ -422,7 +422,7 @@ export const dictionaries = {
     channel: { EMAIL: "E-posta", WHATSAPP: "WhatsApp" },
   },
   en: {
-    appName: "AlacakAI",
+    appName: "Alacore",
     tagline: "AI-powered B2B collections assistant",
     nav: {
       inbox: "Inbox",

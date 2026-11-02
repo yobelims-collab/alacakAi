@@ -33,9 +33,14 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   }
 
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>["data"]["user"] = null;
+  try {
+    user = (await supabase.auth.getUser()).data.user;
+  } catch (err) {
+    // Auth service unreachable or misconfigured: treat as signed out instead of a 500 on public pages.
+    console.error("getSessionUser: supabase auth failed", err);
+    return null;
+  }
   if (!user) return null;
   const { data: profile } = await supabase
     .from("profiles")

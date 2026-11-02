@@ -11,7 +11,7 @@ import type { DataStore } from "./store";
 
 export const DEMO_ORG_ID = "00000000-0000-4000-8000-000000000001";
 export const DEMO_USER_ID = "00000000-0000-4000-8000-000000000002";
-export const DEMO_EMAIL = "demo@alacakai.app";
+export const DEMO_EMAIL = "demo@alacore.app";
 export const DEMO_PASSWORD = "demo1234";
 
 export const DEFAULT_FX_RATES: Record<string, number> = { EUR: 48.5, USD: 41.2, GBP: 56.0, TRY: 1 };
