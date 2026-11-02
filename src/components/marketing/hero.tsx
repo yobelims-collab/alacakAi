@@ -36,7 +36,7 @@ export function Hero({ copy, preview, locale }: { copy: LandingCopy["hero"]; pre
             </span>
           </Reveal>
           <Reveal delay={0.06}>
-            <h1 className="mt-5 text-balance text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.4rem]">{renderHeadline(copy.headline, copy.accent)}</h1>
+            <h2 className="mt-5 text-balance text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.4rem]">{renderHeadline(copy.headline, copy.accent)}</h2>
           </Reveal>
           <Reveal delay={0.12}>
             <p className="mt-5 max-w-lg text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">{copy.sub}</p>

@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
  * Alacore wordmark: "Ala" in the logo navy (foreground token, so it flips in dark mode)
  * and "core" in the emerald→teal logo gradient. Vector text, crisp at any size.
  */
-export function Wordmark({ size = "md", className }: { size?: "sm" | "md" | "lg" | "xl"; className?: string }) {
+export function Wordmark({ size = "md", onDark = false, className }: { size?: "sm" | "md" | "lg" | "xl"; onDark?: boolean; className?: string }) {
   const sizes = { sm: "text-base", md: "text-lg", lg: "text-2xl", xl: "text-4xl" } as const;
   return (
     <span className={cn("select-none font-extrabold leading-none tracking-[-0.04em]", sizes[size], className)}>
-      <span className="text-foreground">Ala</span>
+      <span className={onDark ? "text-white" : "text-foreground"}>Ala</span>
       <span className="text-logo-gradient">core</span>
     </span>
   );

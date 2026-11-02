@@ -7,7 +7,7 @@ import { Faq } from "@/components/marketing/faq";
 import { Features } from "@/components/marketing/features";
 import { MarketingFooter } from "@/components/marketing/footer";
 import { Grades } from "@/components/marketing/grades";
-import { MarketingHeader } from "@/components/marketing/header";
+import { CinematicHero, PillNav } from "@/components/marketing/cinematic-hero";
 import { Hero } from "@/components/marketing/hero";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { PricingSection } from "@/components/marketing/pricing-section";
@@ -26,8 +26,9 @@ export default async function LandingPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <MarketingHeader copy={c.nav} locale={locale} signedIn={Boolean(user)} />
+      <PillNav copy={c.hero} nav={c.nav} locale={locale} signedIn={Boolean(user)} />
       <main className="flex-1">
+        <CinematicHero copy={c.hero} />
         <Hero copy={c.hero} preview={c.preview} locale={locale} />
         <FactsStrip facts={c.facts} />
         <HowItWorks copy={c.how} />

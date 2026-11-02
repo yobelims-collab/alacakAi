@@ -168,3 +168,19 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Full-screen hero backdrop: slow drifting light in the logo colours (used when no video is set). */
+@keyframes aurora-drift-a {
+  0%, 100% { transform: translate3d(-8%, -4%, 0) scale(1); }
+  50% { transform: translate3d(10%, 6%, 0) scale(1.15); }
+}
+@keyframes aurora-drift-b {
+  0%, 100% { transform: translate3d(6%, 8%, 0) scale(1.1); }
+  50% { transform: translate3d(-12%, -6%, 0) scale(0.95); }
+}
+.aurora-a { animation: aurora-drift-a 18s ease-in-out infinite; }
+.aurora-b { animation: aurora-drift-b 22s ease-in-out infinite; }
+.hero-title {
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}

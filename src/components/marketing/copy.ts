@@ -21,7 +21,21 @@ export interface PreviewRow {
 export interface LandingCopy {
   meta: { title: string; description: string };
   nav: { how: string; features: string; pricing: string; faq: string; signIn: string; start: string; inbox: string };
-  hero: { badge: string; headline: string; accent: string; sub: string; demo: string; start: string; note: string };
+  hero: {
+    badge: string;
+    headline: string;
+    accent: string;
+    sub: string;
+    demo: string;
+    start: string;
+    note: string;
+    /** Three giant staggered words of the full-screen hero; the last one gets the logo gradient. */
+    words: [string, string, string];
+    short: string;
+    /** Product facts (not usage numbers — none exist yet). */
+    stats: { value: string; label: string }[];
+    links: string[];
+  };
   preview: {
     title: string;
     demo: string;
@@ -83,6 +97,14 @@ const tr: LandingCopy = {
     demo: "Demo'yu Gör",
     start: "Ücretsiz Başla",
     note: "Kredi kartı gerekmez · 2 dakikada demo",
+    words: ["alacak", "takibi", "bitti"],
+    short: "ai vadeleri izler, hatırlatmaları yazar, yanıtları sınıflandırır. kararı siz verirsiniz.",
+    stats: [
+      { value: "3 gün", label: "vadeden önce otomatik hatırlatma" },
+      { value: "a–e", label: "her müşteriye anlaşılır derece" },
+      { value: "%100", label: "vade sonrası mesajlar insan onayıyla" },
+    ],
+    links: ["nasıl çalışır", "özellikler", "fiyatlar", "sss"],
   },
   preview: {
     title: "Tahsilat Özeti",
@@ -211,6 +233,14 @@ const en: LandingCopy = {
     demo: "See the demo",
     start: "Start free",
     note: "No credit card · Demo in 2 minutes",
+    words: ["stop", "chasing", "payments"],
+    short: "the ai watches due dates, drafts reminders and sorts every reply. you make the calls.",
+    stats: [
+      { value: "3 days", label: "automatic reminder before the due date" },
+      { value: "a–e", label: "a rating every customer gets" },
+      { value: "100%", label: "of post-due messages human-approved" },
+    ],
+    links: ["how it works", "features", "pricing", "faq"],
   },
   preview: {
     title: "Collections summary",
