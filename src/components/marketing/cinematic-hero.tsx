@@ -1,8 +1,4 @@
-import Link from "next/link";
-import { LanguageSwitcher } from "@/components/app/language-switcher";
-import { LogoMark, Wordmark } from "@/components/app/logo";
 import { DotPattern } from "@/components/magicui/dot-pattern";
-import type { Locale } from "@/lib/types";
 import type { LandingCopy } from "./copy";
 
 /**
@@ -10,7 +6,6 @@ import type { LandingCopy } from "./copy";
  * `public/`) via NEXT_PUBLIC_HERO_VIDEO_URL; without it the animated backdrop is shown.
  */
 const HERO_VIDEO = process.env.NEXT_PUBLIC_HERO_VIDEO_URL ?? "";
-const ANCHORS = ["#how", "#features", "#pricing", "#faq"];
 
 function Backdrop() {
   if (HERO_VIDEO) {
@@ -35,42 +30,6 @@ function Stat({ value, label, align, divider }: { value: string; label: string; 
         {align === "left" && line}
       </div>
       <p className={`mt-1 max-w-[150px] text-xs text-white/70 md:max-w-[220px] md:text-sm ${align === "right" ? "ml-auto" : ""}`}>{label}</p>
-    </div>
-  );
-}
-
-/** Floating pill navigation, fixed so it stays available over the light sections too. */
-export function PillNav({ copy, nav, locale, signedIn }: { copy: LandingCopy["hero"]; nav: LandingCopy["nav"]; locale: Locale; signedIn: boolean }) {
-  return (
-    <div className="fixed left-0 right-0 top-0 z-50 px-4 pt-4 md:px-10 md:pt-6">
-      <nav className="flex items-center justify-between gap-4" aria-label="Primary">
-        <Link href="/" aria-label="Alacore" className="flex items-center gap-2 rounded-full bg-[#07111f]/90 py-2.5 pl-3 pr-5 backdrop-blur">
-          <LogoMark className="size-6" />
-          <Wordmark size="sm" onDark />
-        </Link>
-
-        <div className="hidden items-center gap-1 rounded-full bg-[#07111f]/90 px-3 py-2 backdrop-blur md:flex">
-          {copy.links.map((label, i) => (
-            <a key={label} href={ANCHORS[i]} className="rounded-full px-5 py-2 text-sm text-neutral-300 transition-colors hover:text-white">
-              {label}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-1 rounded-full bg-[#07111f]/90 py-1.5 pl-1.5 pr-4 backdrop-blur sm:flex">
-            <LanguageSwitcher locale={locale} onDark />
-            {!signedIn && (
-              <Link href="/login" className="ml-2 text-sm text-neutral-300 transition-colors hover:text-white">
-                {nav.signIn.toLocaleLowerCase(locale)}
-              </Link>
-            )}
-          </div>
-          <Link href={signedIn ? "/inbox" : "/signup"} className="rounded-full bg-white px-6 py-3 text-sm text-[#0f1f3a] transition-colors hover:bg-neutral-200">
-            {(signedIn ? nav.inbox : nav.start).toLocaleLowerCase(locale)}
-          </Link>
-        </div>
-      </nav>
     </div>
   );
 }
@@ -107,3 +66,5 @@ export function CinematicHero({ copy }: { copy: LandingCopy["hero"] }) {
     </section>
   );
 }
+
+export { PillNav } from "./pill-nav";
