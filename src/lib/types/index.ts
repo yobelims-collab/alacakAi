@@ -213,6 +213,12 @@ export interface Invoice extends OrgRow {
   last_reminder_stage: CollectionStage | null;
   last_reminder_at: string | null;
   updated_at: string;
+  /** Storage path of the attached invoice PDF (sent with reminders), if any. */
+  document_path: string | null;
+  document_name: string | null;
+  /** e-Fatura ETTN (UUID) when imported from UBL-TR XML; used to skip duplicates. */
+  external_ref: string | null;
+  source: "MANUAL" | "CSV" | "EFATURA" | "DEMO";
 }
 
 export interface Payment extends OrgRow {

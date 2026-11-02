@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Globe, Languages, Lightbulb, Pencil } from "lucide-react";
+import { ArrowLeft, Globe, Languages, Lightbulb, Pencil, UserRound } from "lucide-react";
 import { DescriptionList, PageHeader } from "@/components/app/page-header";
 import { GradeBadge } from "@/components/app/grade-badge";
 import { GradeHistoryChart } from "@/components/charts/grade-history";
@@ -19,8 +19,8 @@ import { loadCustomerDetail } from "@/lib/queries";
 export const metadata = { title: "Customer" };
 
 const LABELS = {
-  tr: { overview: "Genel Bakış", payment: "Ödeme", type: "Tür", promisedDate: "Söz verilen tarih", noPromises: "Ödeme sözü yok.", noHistory: "Henüz fatura veya ödeme yok.", noInsights: "Henüz yeterli veri yok.", noRisk: "Risk skoru henüz hesaplanmadı.", usedOf: "kullanılan" },
-  en: { overview: "Overview", payment: "Payment", type: "Type", promisedDate: "Promised date", noPromises: "No payment promises.", noHistory: "No invoices or payments yet.", noInsights: "Not enough data yet.", noRisk: "Risk score has not been computed yet.", usedOf: "used" },
+  tr: { accountManager: "Hesap yöneticisi", overview: "Genel Bakış", payment: "Ödeme", type: "Tür", promisedDate: "Söz verilen tarih", noPromises: "Ödeme sözü yok.", noHistory: "Henüz fatura veya ödeme yok.", noInsights: "Henüz yeterli veri yok.", noRisk: "Risk skoru henüz hesaplanmadı.", usedOf: "kullanılan" },
+  en: { accountManager: "Account manager", overview: "Overview", payment: "Payment", type: "Type", promisedDate: "Promised date", noPromises: "No payment promises.", noHistory: "No invoices or payments yet.", noInsights: "Not enough data yet.", noRisk: "Risk score has not been computed yet.", usedOf: "used" },
 };
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -31,6 +31,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   const d = await loadCustomerDetail(ctx, id);
   if (!d) notFound();
   const { customer: c, financials: f, risk } = d;
+  const manager = c.account_manager_id ? await ctx.store.get("profiles", c.account_manager_id) : null;
   const money = (n: number) => formatMoney(n, f.currency, locale);
   const invoiceNumbers = Object.fromEntries(d.invoices.map((i) => [i.id, i.invoice_number]));
 
@@ -73,6 +74,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           </Badge>
         )}
         <Badge variant="neutral">{c.currency}</Badge>
+        <Badge variant="neutral" title={L.accountManager}>
+          <UserRound /> {L.accountManager}: {manager ? manager.full_name || manager.email : "—"}
+        </Badge>
       </div>
 
       <Tabs defaultValue="overview">

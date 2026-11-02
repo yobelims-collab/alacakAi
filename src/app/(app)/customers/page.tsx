@@ -14,8 +14,8 @@ import { loadCustomers } from "@/lib/queries";
 export const metadata = { title: "Customers" };
 
 const LABELS = {
-  tr: { countryLanguage: "Ülke / Dil", terms: "Vade", results: "müşteri", noResults: "Aramayla eşleşen müşteri yok." },
-  en: { countryLanguage: "Country / Language", terms: "Terms", results: "customers", noResults: "No customers match your search." },
+  tr: { accountManager: "Hesap yöneticisi", countryLanguage: "Ülke / Dil", terms: "Vade", results: "müşteri", noResults: "Aramayla eşleşen müşteri yok." },
+  en: { accountManager: "Account manager", countryLanguage: "Country / Language", terms: "Terms", results: "customers", noResults: "No customers match your search." },
 };
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
@@ -24,7 +24,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const L = LABELS[locale];
   const sp = await searchParams;
   const q = (sp.q ?? "").trim();
-  const all = await loadCustomers(ctx);
+  const [all, profiles] = await Promise.all([loadCustomers(ctx), ctx.store.list("profiles")]);
+  const managerName = new Map(profiles.map((p) => [p.id, p.full_name || p.email]));
   const needle = q.toLocaleLowerCase("tr");
   const rows = needle
     ? all.filter(({ customer: c }) => [c.company_name, c.contact_person ?? "", c.email ?? ""].some((v) => v.toLocaleLowerCase("tr").includes(needle)))
@@ -85,6 +86,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 <TableRow>
                   <TableHead className="pl-5">{t.customers.companyName}</TableHead>
                   <TableHead>{t.customers.contactPerson}</TableHead>
+                  <TableHead>{L.accountManager}</TableHead>
                   <TableHead>{L.countryLanguage}</TableHead>
                   <TableHead className="text-right">{L.terms}</TableHead>
                   <TableHead className="text-right">{t.customers.outstanding}</TableHead>
@@ -108,6 +110,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                       <p>{c.contact_person ?? "—"}</p>
                       {c.email && <p className="truncate text-xs">{c.email}</p>}
                     </TableCell>
+                    <TableCell className="text-muted-foreground">{(c.account_manager_id && managerName.get(c.account_manager_id)) || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {c.country ?? "—"} <span className="uppercase text-xs">· {c.preferred_language}</span>
                     </TableCell>
@@ -132,7 +135,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 ))}
                 {rows.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
                       {L.noResults}
                     </TableCell>
                   </TableRow>

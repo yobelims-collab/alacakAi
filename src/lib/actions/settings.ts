@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireContext } from "@/lib/db";
+import { denyManage } from "@/lib/services/team-service";
 import { audit } from "@/lib/services/audit";
 import { getAutomationRules } from "@/lib/services/collection-service";
 import type { Channel } from "@/lib/types";
@@ -14,6 +15,7 @@ export async function updateCompanyAction(_prev: FormState, formData: FormData):
   const parsed = companySettingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
+  const denied = denyManage(ctx); if (denied) return denied;
   const { fx_eur, fx_usd, fx_gbp, approval_amount_threshold, ...rest } = parsed.data;
   const fx: Record<string, number> = { ...ctx.org.fx_rates, TRY: 1 };
   if (fx_eur) fx.EUR = fx_eur;
@@ -34,6 +36,7 @@ export async function updateAiSettingsAction(_prev: FormState, formData: FormDat
   });
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
+  const denied = denyManage(ctx); if (denied) return denied;
   await ctx.store.updateOrganization(parsed.data);
   await audit(ctx.store, { user_id: ctx.user.id, action: "settings.ai", entity_type: "organization", entity_id: ctx.org.id });
   revalidatePath("/settings", "layout");
@@ -44,6 +47,7 @@ export async function updateCommunicationSettingsAction(_prev: FormState, formDa
   const parsed = communicationSettingsSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
+  const denied = denyManage(ctx); if (denied) return denied;
   await ctx.store.updateOrganization(parsed.data);
   await audit(ctx.store, { user_id: ctx.user.id, action: "settings.communication", entity_type: "organization", entity_id: ctx.org.id });
   revalidatePath("/settings", "layout");
@@ -67,6 +71,7 @@ export async function updateAutomationAction(_prev: FormState, formData: FormDat
   });
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
+  const denied = denyManage(ctx); if (denied) return denied;
   const rules = await getAutomationRules(ctx.store);
   await ctx.store.update("automation_rules", rules.id, parsed.data);
   await audit(ctx.store, { user_id: ctx.user.id, action: "settings.automation", entity_type: "automation_rule", entity_id: rules.id });
@@ -78,6 +83,7 @@ export async function updateGradeRulesAction(_prev: FormState, formData: FormDat
   const parsed = gradeRulesSchema.safeParse({ A: formData.get("A"), B: formData.get("B"), C: formData.get("C"), D: formData.get("D"), E: formData.get("E") });
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
+  const denied = denyManage(ctx); if (denied) return denied;
   await ctx.store.updateOrganization({ grade_rules: parsed.data });
   await audit(ctx.store, { user_id: ctx.user.id, action: "settings.grade_rules", entity_type: "organization", entity_id: ctx.org.id });
   revalidatePath("/", "layout");

@@ -9,6 +9,8 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   turbopack: { root: __dirname },
+  // Invoice PDFs (≤ 5 MB) and e-Fatura XML batches are sent through server actions (default limit 1 MB).
+  experimental: { serverActions: { bodySizeLimit: "6mb" } },
   async headers() {
     return [{ source: "/(.*)", headers: SECURITY_HEADERS }];
   },

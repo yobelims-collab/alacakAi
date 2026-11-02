@@ -54,6 +54,14 @@ export const customerSchema = z.object({
     .transform((v) => (v === undefined || v === "" ? null : parseAmount(v))),
   currency: currencySchema.default("TRY"),
   notes: optionalText,
+  /** Profile id of the sales owner; the action checks it belongs to this org (else null). */
+  account_manager_id: z
+    .string()
+    .trim()
+    .max(64)
+    .optional()
+    .nullable()
+    .transform((v) => (v ? v : null)),
 });
 export type CustomerInput = z.infer<typeof customerSchema>;
 
@@ -180,6 +188,8 @@ export const signUpSchema = z.object({
   full_name: z.string().trim().min(2).max(120),
   email: z.string().trim().email(),
   password: z.string().min(8).max(128),
+  /** KVKK: the user must confirm having read the information notice (/gizlilik). */
+  kvkk_ack: z.literal("on", { message: "KVKK Aydınlatma Metni onaylanmalı / please confirm the privacy notice" }),
 });
 
 export const signInSchema = z.object({

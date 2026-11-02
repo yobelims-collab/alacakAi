@@ -14,7 +14,10 @@ import { formatMoney, toReporting } from "@/lib/domain/money";
 import type { Audience, AutomationRule, Channel, Classification, CollectionStage, Communication, Customer, Grade, Invoice, Locale, Organization, PaymentPromise, Tone } from "@/lib/types";
 import { audit } from "./audit";
 import { classifierLlm, messageLlm } from "./llm";
+import { loadInvoiceDocument } from "./document-service";
 import { sendMessage } from "./messaging";
+import { env } from "@/lib/env";
+import { replyToAddress } from "@/lib/domain/inbound-email";
 import { recomputeRisk } from "./risk-service";
 
 export const DEFAULT_AUTOMATION: Omit<AutomationRule, "id" | "created_at" | "organization_id"> = {
@@ -182,6 +185,8 @@ export async function dispatchCommunication(ctx: AppContext, comm: Communication
   }).filter((p) => p.startsWith("forbidden"));
   if (problems.length) throw new Error(`Message blocked by safety rules: ${problems.join(", ")}`);
 
+  const docInvoice = comm.channel === "EMAIL" && comm.invoice_id ? await store.get("invoices", comm.invoice_id) : null;
+  const doc = docInvoice?.document_path ? await loadInvoiceDocument(ctx, docInvoice) : null;
   const result = await sendMessage({
     channel: comm.channel,
     to: comm.channel === "EMAIL" ? (customer?.email ?? null) : (customer?.whatsapp_number ?? null),
@@ -189,6 +194,8 @@ export async function dispatchCommunication(ctx: AppContext, comm: Communication
     body: comm.body,
     fromName: org.sender_name,
     fromEmail: org.sender_email,
+    attachments: doc ? [{ filename: doc.filename, content: doc.base64 }] : undefined,
+    replyTo: env.inboundEmailDomain ? replyToAddress(org.id, env.inboundEmailDomain) : org.sender_email,
   });
   const sentAt = new Date().toISOString();
   const updated = await store.update("communications", comm.id, {
@@ -617,7 +624,9 @@ export async function processInboundReply(ctx: AppContext, input: { customerId: 
       alternatives: alt,
       snoozed_until: null,
       routed_to: audience,
-      approval_reason: decision.escalate ? decision.reasons.join(" · ") : ctx.locale === "tr" ? `Müşteri yanıtına cevap (${ctx.t.intent[finalClassification.intent]})` : `Reply to customer (${ctx.t.intent[finalClassification.intent]})`,
+      approval_reason:
+        (decision.escalate ? decision.reasons.join(" · ") : ctx.locale === "tr" ? `Müşteri yanıtına cevap (${ctx.t.intent[finalClassification.intent]})` : `Reply to customer (${ctx.t.intent[finalClassification.intent]})`) +
+        (finalClassification.intent === "INVOICE_NOT_RECEIVED" && !invoice.document_path ? (ctx.locale === "en" ? " · No invoice PDF attached — upload one before sending" : " · Fatura PDF'i ekli değil — gönderimden önce faturaya PDF yükleyin") : ""),
     });
   }
 

@@ -5,6 +5,7 @@ import { DescriptionList, PageHeader } from "@/components/app/page-header";
 import { InvoiceStatusBadge, PaymentStatusBadge, PromiseStatusBadge, StageBadge } from "@/components/app/status-badge";
 import { CommunicationList } from "@/components/customers/communication-list";
 import { InvoiceActions } from "@/components/invoices/invoice-actions";
+import { InvoiceDocument } from "@/components/invoices/invoice-document";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -99,27 +100,30 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.invoices.payments}</CardTitle>
-            <CardDescription>{payments.length}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            {payments.length === 0 && <p className="text-sm text-muted-foreground">{L.noPayments}</p>}
-            {payments.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3 rounded-md border p-2.5 text-sm">
-                <div className="min-w-0">
-                  <p className="font-medium tabular text-emerald-700 dark:text-emerald-300">+{formatMoney(p.amount, p.currency, locale)}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {formatDate(p.payment_date, locale)}
-                    {p.reference && <span className="ml-1 font-mono">· {p.reference}</span>}
-                  </p>
+        <div className="flex flex-col gap-4">
+          <InvoiceDocument locale={locale} invoiceId={inv.id} documentName={inv.document_path ? (inv.document_name ?? `${inv.invoice_number}.pdf`) : null} />
+          <Card>
+            <CardHeader>
+              <CardTitle>{t.invoices.payments}</CardTitle>
+              <CardDescription>{payments.length}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              {payments.length === 0 && <p className="text-sm text-muted-foreground">{L.noPayments}</p>}
+              {payments.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 rounded-md border p-2.5 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium tabular text-emerald-700 dark:text-emerald-300">+{formatMoney(p.amount, p.currency, locale)}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {formatDate(p.payment_date, locale)}
+                      {p.reference && <span className="ml-1 font-mono">· {p.reference}</span>}
+                    </p>
+                  </div>
+                  <PaymentStatusBadge status={p.status} t={t} />
                 </div>
-                <PaymentStatusBadge status={p.status} t={t} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">

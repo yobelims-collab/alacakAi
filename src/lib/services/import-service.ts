@@ -46,8 +46,17 @@ export interface ImportInvoicesResult {
   createdCustomers: number;
 }
 
+export interface ImportInvoicesOptions {
+  /** Origin recorded on the new invoices (default "CSV"). */
+  source?: "CSV" | "EFATURA";
+  /** invoice_number → external reference (e-Fatura ETTN) stored as `external_ref`. */
+  externalRefs?: Record<string, string>;
+}
+
 /** Inserts validated invoice rows, creating customers by (case-insensitive) company name as needed. */
-export async function importInvoices(ctx: AppContext, rows: InvoiceCsvRow[]): Promise<ImportInvoicesResult> {
+export async function importInvoices(ctx: AppContext, rows: InvoiceCsvRow[], options: ImportInvoicesOptions = {}): Promise<ImportInvoicesResult> {
+  const source = options.source ?? "CSV";
+  const externalRefs = options.externalRefs ?? {};
   const { store, org } = ctx;
   const asOf = today();
   const [customers, invoices] = await Promise.all([store.list("customers"), store.list("invoices")]);
@@ -107,6 +116,10 @@ export async function importInvoices(ctx: AppContext, rows: InvoiceCsvRow[]): Pr
       description: null,
       last_reminder_stage: null,
       last_reminder_at: null,
+      document_path: null,
+      document_name: null,
+      external_ref: externalRefs[r.invoice_number] ?? null,
+      source,
       updated_at: new Date().toISOString(),
     };
     const { id: _i, created_at: _c, organization_id: _o, ...rest } = { ...base, status: deriveStatus(base, asOf) };
@@ -117,7 +130,7 @@ export async function importInvoices(ctx: AppContext, rows: InvoiceCsvRow[]): Pr
   }
 
   await store.insertMany("invoices", toInsert);
-  await audit(store, { user_id: ctx.user.id, action: "invoices.import", entity_type: "invoice", details: { imported: toInsert.length, skipped, createdCustomers } });
+  await audit(store, { user_id: ctx.user.id, action: "invoices.import", entity_type: "invoice", details: { imported: toInsert.length, skipped, createdCustomers, source } });
   for (const id of touched) {
     const c = await store.get("customers", id);
     if (c) await refreshCustomerRisk(ctx, c);

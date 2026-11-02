@@ -43,7 +43,7 @@ export async function signUpAction(_prev: ActionState, formData: FormData): Prom
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name } } });
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, kvkk_ack_at: new Date().toISOString() } } });
   if (error) return { error: error.message };
   if (!data.session) return { message: "check_email" };
   redirect("/onboarding");

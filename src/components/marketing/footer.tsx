@@ -23,7 +23,7 @@ export function MarketingFooter({ copy, nav }: { copy: LandingCopy["footer"]; na
             <div className="flex flex-col gap-2">
               <Link href="/login" className="text-muted-foreground hover:text-foreground">{copy.signIn}</Link>
               <Link href="/signup" className="text-muted-foreground hover:text-foreground">{copy.signUp}</Link>
-              <a href="#privacy" className="text-muted-foreground hover:text-foreground">{copy.privacy}</a>
+              <Link href="/gizlilik" className="text-muted-foreground hover:text-foreground">{copy.privacy}</Link>
             </div>
           </nav>
         </div>

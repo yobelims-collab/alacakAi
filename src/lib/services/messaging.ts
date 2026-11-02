@@ -9,6 +9,10 @@ export interface OutboundMessage {
   body: string;
   fromName: string | null;
   fromEmail: string | null;
+  /** E-mail only: files attached via the provider (base64 content). Ignored for WhatsApp. */
+  attachments?: { filename: string; content: string /* base64 */ }[];
+  /** E-mail only: where customer replies go (reply+<orgId>@INBOUND_EMAIL_DOMAIN when inbound is set up). */
+  replyTo?: string | null;
 }
 
 export interface SendResult {
@@ -40,7 +44,7 @@ async function sendViaResend(msg: OutboundMessage): Promise<SendResult> {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${env.resendApiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [msg.to], subject: msg.subject ?? "", text: msg.body }),
+      body: JSON.stringify({ from, to: [msg.to], subject: msg.subject ?? "", text: msg.body, ...(msg.attachments?.length ? { attachments: msg.attachments } : {}), ...(msg.replyTo ? { reply_to: msg.replyTo } : {}) }),
     });
     if (!res.ok) return { status: "FAILED", providerMessageId: null, note: `resend ${res.status}` };
     const data = (await res.json()) as { id?: string };

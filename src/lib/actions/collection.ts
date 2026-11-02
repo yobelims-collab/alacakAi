@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireContext } from "@/lib/db";
+import { assertCanEdit } from "@/lib/services/team-service";
 import { resetDemoData } from "@/lib/db/demo-seed";
 import { approveCommunication, approveMany, decideAction, draftReminder, processInboundReply, rejectCommunication, resolveAction, runCollectionCycle, setInvoiceStatus, snoozeCommunication, type CycleSummary, type InboxDecision } from "@/lib/services/collection-service";
 import { addDays, today } from "@/lib/domain/dates";
@@ -25,6 +26,7 @@ function fail(err: unknown): ActionResult<never> {
 export async function runCycleAction(): Promise<ActionResult<CycleSummary>> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     const data = await runCollectionCycle(ctx, { trigger: "manual" });
     revalidateAll();
     return { ok: true, data };
@@ -39,6 +41,7 @@ export async function approveCommunicationAction(input: { id: string; subject?: 
   try {
     const parsed = approveSchema.parse(input);
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     const comm = await approveCommunication(ctx, parsed.id, { subject: parsed.subject, body: parsed.body, variant: parsed.variant });
     revalidateAll();
     return { ok: true, data: { status: comm.status } };
@@ -50,6 +53,7 @@ export async function approveCommunicationAction(input: { id: string; subject?: 
 export async function rejectCommunicationAction(id: string): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await rejectCommunication(ctx, z.string().min(1).parse(id));
     revalidateAll();
     return { ok: true };
@@ -64,6 +68,7 @@ export async function simulateReplyAction(input: { customerId: string; invoiceId
   try {
     const parsed = replySchema.parse(input);
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     const r = await processInboundReply(ctx, { customerId: parsed.customerId, invoiceId: parsed.invoiceId ?? null, channel: parsed.channel, body: parsed.body, source: "simulated" });
     revalidateAll();
     return { ok: true, data: { intent: r.classification.intent, confidence: r.classification.confidence, escalated: r.escalated, promisedDate: r.promise?.promised_date ?? null } };
@@ -75,6 +80,7 @@ export async function simulateReplyAction(input: { customerId: string; invoiceId
 export async function resolveActionAction(id: string): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await resolveAction(ctx, z.string().min(1).parse(id));
     revalidateAll();
     return { ok: true };
@@ -89,6 +95,7 @@ export async function draftReminderAction(input: { invoiceId: string; stage?: st
   try {
     const parsed = draftSchema.parse(input);
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     const inv = await ctx.store.get("invoices", parsed.invoiceId);
     if (!inv) return { ok: false, error: "invoice not found" };
     const comm = await draftReminder(ctx, inv, { stage: parsed.stage, tone: parsed.tone, channel: parsed.channel });
@@ -102,6 +109,7 @@ export async function draftReminderAction(input: { invoiceId: string; stage?: st
 export async function setInvoiceStatusAction(invoiceId: string, status: "PAID" | "DISPUTED" | "ESCALATED" | "SENT"): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await setInvoiceStatus(ctx, z.string().min(1).parse(invoiceId), z.enum(["PAID", "DISPUTED", "ESCALATED", "SENT"]).parse(status));
     revalidateAll();
     return { ok: true };
@@ -113,6 +121,7 @@ export async function setInvoiceStatusAction(invoiceId: string, status: "PAID" |
 export async function resetDemoAction(): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     if (!ctx.org.is_demo && !ctx.demo) return { ok: false, error: "Only available for demo organizations" };
     await resetDemoData(ctx.store, ctx.user.id);
     revalidateAll();
@@ -126,6 +135,7 @@ export async function approveManyAction(ids: string[]): Promise<ActionResult<{ s
   try {
     const parsed = z.array(z.string().min(1)).min(1).max(100).parse(ids);
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     const r = await approveMany(ctx, parsed);
     revalidateAll();
     return { ok: true, data: { sent: r.filter((x) => x.ok).length, failed: r.filter((x) => !x.ok).length } };
@@ -137,6 +147,7 @@ export async function approveManyAction(ids: string[]): Promise<ActionResult<{ s
 export async function snoozeCommunicationAction(id: string, days = 3): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await snoozeCommunication(ctx, z.string().min(1).parse(id), addDays(today(), z.number().int().min(1).max(30).parse(days)));
     revalidateAll();
     return { ok: true };
@@ -151,6 +162,7 @@ export async function decideActionAction(input: { id: string; decision: InboxDec
   try {
     const parsed = decisionSchema.parse(input);
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await decideAction(ctx, parsed.id, parsed.decision, { date: parsed.date });
     revalidateAll();
     return { ok: true };

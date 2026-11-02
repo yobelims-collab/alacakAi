@@ -13,6 +13,10 @@ export const env = {
   appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
   forceDemo: process.env.DEMO_MODE === "true",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
+  /** Svix signing secret (whsec_…) of the Resend "email.received" webhook. */
+  resendWebhookSecret: (process.env.RESEND_WEBHOOK_SECRET ?? "").trim(),
+  /** Receiving domain for customer replies, e.g. reply.alacore.app (reply+<orgId>@domain). */
+  inboundEmailDomain: (process.env.INBOUND_EMAIL_DOMAIN ?? "").trim().toLowerCase(),
   whatsappToken: process.env.WHATSAPP_ACCESS_TOKEN ?? "",
   whatsappPhoneId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",
 };

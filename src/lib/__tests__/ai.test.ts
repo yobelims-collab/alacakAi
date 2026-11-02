@@ -101,7 +101,7 @@ describe("risk analyzer", () => {
 
 describe("payment matcher", () => {
   const customers: Customer[] = [{ id: "c1", created_at: "", organization_id: "o", company_name: "ABC Teknoloji A.Ş.", contact_person: null, email: null, phone: null, whatsapp_number: null, country: null, preferred_language: "tr", payment_terms_days: 30, credit_limit: null, currency: "EUR", notes: null, account_manager_id: null, shipments_on_hold: false }];
-  const inv = (id: string, num: string, amount: number, currency: "EUR" | "TRY" = "EUR"): Invoice => ({ id, created_at: "", organization_id: "o", customer_id: "c1", invoice_number: num, invoice_date: "2026-08-01", due_date: "2026-09-03", currency, amount, paid_amount: 0, status: "OVERDUE", collection_stage: "OVERDUE_MID", assigned_user_id: null, description: null, last_reminder_stage: null, last_reminder_at: null, updated_at: "" });
+  const inv = (id: string, num: string, amount: number, currency: "EUR" | "TRY" = "EUR"): Invoice => ({ id, created_at: "", organization_id: "o", customer_id: "c1", invoice_number: num, invoice_date: "2026-08-01", due_date: "2026-09-03", currency, amount, paid_amount: 0, status: "OVERDUE", collection_stage: "OVERDUE_MID", assigned_user_id: null, description: null, last_reminder_stage: null, last_reminder_at: null, updated_at: "", document_path: null, document_name: null, external_ref: null, source: "MANUAL" });
   it("matches by reference tail and exact amount with high confidence", () => {
     const c = suggestMatches({ amount: 18500, currency: "EUR", reference: "ABC-INV182" }, [inv("i1", "INV-2026-00182", 18500), inv("i2", "INV-2026-00196", 21000)], customers, "en");
     expect(c[0].invoice.id).toBe("i1");

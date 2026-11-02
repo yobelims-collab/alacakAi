@@ -114,6 +114,7 @@ export async function seedDemoData(store: DataStore, opts: { ownerUserId: string
       customer_id: c.id, invoice_number: num, invoice_date: d(invOff), due_date: d(dueOff), currency: c.currency,
       amount, paid_amount: paid, status: status ?? "SENT", collection_stage: "NONE", assigned_user_id: opts.ownerUserId,
       description: null, last_reminder_stage: null, last_reminder_at: null, updated_at: nowIso,
+      document_path: null, document_name: null, external_ref: null, source: "DEMO",
     };
     const derived = status ?? deriveStatus(base, asOf);
     const { id: _i, created_at: _c, organization_id: _o, ...rest } = { ...base, status: derived };

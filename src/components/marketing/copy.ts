@@ -216,7 +216,7 @@ const tr: LandingCopy = {
     demo: "Demo'yu Gör",
     start: "Ücretsiz Başla",
   },
-  footer: { tagline: "Türk şirketleri için yapay zekâ destekli B2B tahsilat.", signIn: "Giriş", signUp: "Kayıt", privacy: "Gizlilik", rights: "© 2026 Alacore. Tüm hakları saklıdır." },
+  footer: { tagline: "Türk şirketleri için yapay zekâ destekli B2B tahsilat.", signIn: "Giriş", signUp: "Kayıt", privacy: "Gizlilik ve KVKK", rights: "© 2026 Alacore. Tüm hakları saklıdır." },
 };
 
 const en: LandingCopy = {
@@ -352,7 +352,7 @@ const en: LandingCopy = {
     demo: "See the demo",
     start: "Start free",
   },
-  footer: { tagline: "AI-powered B2B collections for Turkish companies.", signIn: "Sign in", signUp: "Sign up", privacy: "Privacy", rights: "© 2026 Alacore. All rights reserved." },
+  footer: { tagline: "AI-powered B2B collections for Turkish companies.", signIn: "Sign in", signUp: "Sign up", privacy: "Privacy & KVKK", rights: "© 2026 Alacore. All rights reserved." },
 };
 
 export const LANDING_COPY: Record<Locale, LandingCopy> = { tr, en };

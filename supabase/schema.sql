@@ -94,6 +94,10 @@ create table if not exists public.invoices (
   last_reminder_stage text,
   last_reminder_at timestamptz,
   updated_at timestamptz not null default now(),
+  document_path text,
+  document_name text,
+  external_ref text,
+  source text not null default 'MANUAL',
   unique (organization_id, invoice_number)
 );
 create index if not exists invoices_org_idx on public.invoices(organization_id);
@@ -264,6 +268,13 @@ alter table public.risk_scores add column if not exists facts jsonb not null def
 alter table public.risk_scores add column if not exists history jsonb not null default '[]'::jsonb;
 alter table public.automation_rules add column if not exists auto_send_pre_due boolean not null default true;
 alter table public.automation_rules add column if not exists sales_involved_after_days int not null default 14;
+alter table public.invoices add column if not exists document_path text;
+alter table public.invoices add column if not exists document_name text;
+alter table public.invoices add column if not exists external_ref text;
+alter table public.invoices add column if not exists source text not null default 'MANUAL';
+
+-- Private bucket for invoice PDFs (accessed only server-side with the service role key).
+insert into storage.buckets (id, name, public) values ('invoice-docs', 'invoice-docs', false) on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Tenant helper + organization creation (the only way a user obtains an organization)

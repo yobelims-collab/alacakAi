@@ -16,9 +16,18 @@ export interface CustomerFormProps {
   /** When present the form updates this customer; otherwise it creates a new one. */
   customer?: Customer;
   defaults: { paymentTermsDays: number; currency: Currency; language: Locale };
+  /** Org members that can be picked as account manager (sales owner). */
+  managers?: { id: string; full_name: string; email: string }[];
+  locale?: Locale;
 }
 
-export function CustomerForm({ t, customer, defaults }: CustomerFormProps) {
+const MANAGER_COPY = {
+  tr: { label: "Hesap yöneticisi (satış)", none: "— Yok", hint: "Satış rolündeki kullanıcılar yalnızca kendi müşterilerini görür." },
+  en: { label: "Account manager (sales)", none: "— None", hint: "Sales users only see the customers they manage." },
+};
+
+export function CustomerForm({ t, customer, defaults, managers = [], locale = "tr" }: CustomerFormProps) {
+  const mc = MANAGER_COPY[locale];
   const action = customer ? updateCustomerAction.bind(null, customer.id) : createCustomerAction;
   const [state, formAction] = useActionState<FormState, FormData>(action, {});
 
@@ -65,6 +74,16 @@ export function CustomerForm({ t, customer, defaults }: CustomerFormProps) {
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
                   {c}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label={mc.label} hint={mc.hint} className="sm:col-span-2">
+            <Select name="account_manager_id" defaultValue={customer?.account_manager_id ?? ""}>
+              <option value="">{mc.none}</option>
+              {managers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.full_name || m.email}
                 </option>
               ))}
             </Select>

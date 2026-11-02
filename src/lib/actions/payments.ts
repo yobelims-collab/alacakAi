@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireContext } from "@/lib/db";
+import { assertCanEdit, denyEdit } from "@/lib/services/team-service";
 import { validateBankCsv, type CsvValidation } from "@/lib/services/import-service";
 import { importBankTransactions, matchPayment, recordPayment, rejectSuggestion } from "@/lib/services/payment-service";
 import { issuesToMessage, paymentSchema, type BankCsvRow } from "@/lib/validation";
@@ -18,6 +19,7 @@ export async function createPaymentAction(_prev: FormState, formData: FormData):
   const parsed = paymentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: issuesToMessage(parsed.error) };
   const ctx = await requireContext();
+  const denied = denyEdit(ctx); if (denied) return denied;
   try {
     await recordPayment(ctx, parsed.data, "MANUAL");
   } catch (e) {
@@ -30,6 +32,7 @@ export async function createPaymentAction(_prev: FormState, formData: FormData):
 export async function matchPaymentAction(paymentId: string, invoiceId: string): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await matchPayment(ctx, z.string().min(1).parse(paymentId), z.string().min(1).parse(invoiceId));
     revalidate();
     return { ok: true };
@@ -41,6 +44,7 @@ export async function matchPaymentAction(paymentId: string, invoiceId: string): 
 export async function rejectSuggestionAction(paymentId: string): Promise<ActionResult> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     await rejectSuggestion(ctx, z.string().min(1).parse(paymentId));
     revalidate();
     return { ok: true };
@@ -57,6 +61,7 @@ export async function validateBankCsvAction(text: string): Promise<CsvValidation
 export async function importBankCsvAction(text: string): Promise<ActionResult<{ imported: number; suggested: number; skipped: number }>> {
   try {
     const ctx = await requireContext();
+    assertCanEdit(ctx);
     const v = validateBankCsv(text.slice(0, 2_000_000));
     if (v.valid.length === 0) return { ok: false, error: "No valid rows" };
     const data = await importBankTransactions(ctx, v.valid.map((x) => x.data));

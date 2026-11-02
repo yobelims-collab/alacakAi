@@ -32,6 +32,8 @@ create your own (empty or demo-seeded) company. Demo data lives in the Node proc
 | `INBOUND_WEBHOOK_SECRET` | for webhooks | `x-webhook-secret` header for inbound replies. |
 | `SESSION_SECRET` | recommended | Signs the demo-mode session cookie. |
 | `RESEND_API_KEY` | no | Real email sending. Missing ⇒ messages recorded as *simulated*. |
+| `RESEND_WEBHOOK_SECRET` | for email replies | Signing secret (`whsec_…`) of the Resend `email.received` webhook. |
+| `INBOUND_EMAIL_DOMAIN` | for email replies | Receiving domain, e.g. `reply.yourdomain.com`; outbound mail gets `Reply-To: reply+<orgId>@` this domain. |
 | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | no | WhatsApp Cloud API sending. Missing ⇒ simulated. |
 
 Never put secrets in `NEXT_PUBLIC_*` variables; the OpenAI key is only read on the server.
@@ -94,7 +96,8 @@ Financial state only ever changes from validated structured objects, never from 
 |---|---|---|
 | Email | Resend via `RESEND_API_KEY` (else simulated) | Verify a sending domain; set `sender_email` in Settings → Communication. |
 | WhatsApp | Meta Cloud API via token + phone id (else simulated) | Approved templates for outbound; point the webhook to `/api/inbound/whatsapp`. |
-| Inbound replies | `/api/inbound/email` & `/api/inbound/whatsapp` (JSON: organization_id, from, text, invoice_number?) | Add a provider adapter that maps the provider payload to this shape. |
+| Email replies | Resend adapter `/api/inbound/resend` (Svix-verified; strips quoted history, finds the invoice number, matches the sender to a customer/contact) | In Resend: add a receiving domain (MX), create a webhook for `email.received` → `https://<app>/api/inbound/resend`, set `RESEND_WEBHOOK_SECRET` + `INBOUND_EMAIL_DOMAIN`. |
+| Other inbound | `/api/inbound/email` & `/api/inbound/whatsapp` (JSON: organization_id, from, text, invoice_number?) | Map any other provider's payload to this shape. |
 | Bank | CSV import + matcher (`bank_transactions`) | Add an adapter that writes `bank_transactions`, then reuse `importBankTransactions`. |
 | AI | OpenAI (optional) | Set `OPENAI_API_KEY`; outputs are validated identically. |
 | Cron | Vercel Cron → `/api/cron/collection` | Any scheduler with the bearer secret works. |
