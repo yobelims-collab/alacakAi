@@ -16,8 +16,8 @@ import type { Locale } from "@/lib/types";
 type Validation = Awaited<ReturnType<typeof validateInvoiceCsvAction>>;
 
 const LABELS = {
-  tr: { file: "CSV dosyası", paste: "veya CSV metnini yapıştırın", validate: "Doğrula", headers: "Bulunan sütunlar", validRows: "geçerli satır", row: "Satır", preview: "Önizleme (ilk 20 geçerli satır)", noValid: "İçe aktarılacak geçerli satır yok.", skipped: "atlandı", empty: "Önce bir dosya seçin veya CSV metni yapıştırın." },
-  en: { file: "CSV file", paste: "or paste CSV text", validate: "Validate", headers: "Headers found", validRows: "valid rows", row: "Row", preview: "Preview (first 20 valid rows)", noValid: "No valid rows to import.", skipped: "skipped", empty: "Choose a file or paste CSV text first." },
+  tr: { file: "CSV dosyası", paste: "veya CSV metnini yapıştırın", validate: "Doğrula", headers: "Bulunan sütunlar", validRows: "geçerli satır", row: "Satır", preview: "Önizleme (ilk 20 geçerli satır)", noValid: "İçe aktarılacak geçerli satır yok.", skipped: "atlandı", empty: "Önce bir dosya seçin veya CSV metni yapıştırın.", xml: "Bu bir XML dosyası. ERP cari ekstresi için \"ERP cari ekstre\" sekmesini, e-Fatura için \"e-Fatura XML\" sekmesini kullanın." },
+  en: { file: "CSV file", paste: "or paste CSV text", validate: "Validate", headers: "Headers found", validRows: "valid rows", row: "Row", preview: "Preview (first 20 valid rows)", noValid: "No valid rows to import.", skipped: "skipped", empty: "Choose a file or paste CSV text first.", xml: "This is an XML file. Use the \"ERP statement\" tab for an ERP account statement, or \"e-Fatura XML\" for e-invoices." },
 };
 
 export function CsvImport({ t, locale, sample }: { t: Dictionary; locale: Locale; sample: string }) {
@@ -48,6 +48,10 @@ export function CsvImport({ t, locale, sample }: { t: Dictionary; locale: Locale
   const validate = () => {
     if (!text.trim()) {
       toast.error(L.empty);
+      return;
+    }
+    if (text.trimStart().startsWith("<")) {
+      toast.error(L.xml, { duration: 8000 });
       return;
     }
     startValidate(async () => {

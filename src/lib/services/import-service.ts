@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import type { AppContext } from "@/lib/db";
 import { today } from "@/lib/domain/dates";
 import { deriveStatus } from "@/lib/domain/invoices";
+import type { ParsedStatement } from "@/lib/domain/cari-ekstre";
 import type { Customer, Invoice } from "@/lib/types";
 import { bankCsvRowSchema, invoiceCsvRowSchema, type BankCsvRow, type InvoiceCsvRow } from "@/lib/validation";
 import { audit } from "./audit";
@@ -147,3 +148,162 @@ export const BANK_CSV_SAMPLE = `transaction_date,description,reference,amount,cu
 2026-09-14,ABC TEKNOLOJI A.S. HAVALE,ABC-INV182,18500,EUR
 2026-09-14,KUZEY GIDA LTD EFT,INV-2026-00202,100000,TRY
 `;
+
+export interface ImportStatementResult {
+  createdCustomers: number;
+  importedInvoices: number;
+  updatedInvoices: number;
+  recordedPayments: number;
+  skipped: number;
+  warnings: string[];
+}
+
+/**
+ * Imports a parsed ERP account statement (cari ekstre): creates the customer if needed, inserts its
+ * invoices with the paid amounts the statement implies, and records each receipt as a payment matched
+ * to the invoice it settled (so the grade's payment-delay history is real). Re-importing a later
+ * statement is safe: invoices are matched by number (paid amount only ever grows), payments are
+ * de-duplicated by receipt/invoice/date/amount, and a new opening balance is skipped for a customer
+ * whose earlier statement was already imported.
+ */
+export async function importAccountStatement(ctx: AppContext, s: ParsedStatement): Promise<ImportStatementResult> {
+  const { store, org } = ctx;
+  const asOf = today();
+  const tr = ctx.locale === "tr";
+  const key = (v: string) => v.trim().toLocaleLowerCase("tr");
+  const [customers, invoices, payments] = await Promise.all([store.list("customers"), store.list("invoices"), store.list("payments")]);
+  const byName = new Map(customers.map((c) => [key(c.company_name), c]));
+  const byEmail = new Map(customers.filter((c) => c.email).map((c) => [key(c.email as string), c]));
+  const invByNumber = new Map(invoices.map((i) => [key(i.invoice_number), i]));
+  const paymentKey = (ref: string, date: string, amount: number, invoiceId: string | null) => `${key(ref)}|${date}|${amount.toFixed(2)}|${invoiceId ?? ""}`;
+  const seenPayments = new Set(payments.map((p) => paymentKey(p.reference ?? "", p.payment_date, p.amount, p.matched_invoice_id)));
+  const result: ImportStatementResult = { createdCustomers: 0, importedInvoices: 0, updatedInvoices: 0, recordedPayments: 0, skipped: 0, warnings: [...s.warnings] };
+  const touched = new Set<string>();
+  const customerFor = new Map<string, Customer>();
+  const invoiceFor = new Map<string, Invoice>(); // `${customerCode}|${number}` → stored invoice
+
+  for (const sc of s.customers) {
+    let customer = byName.get(key(sc.name)) ?? (sc.email ? byEmail.get(key(sc.email)) : undefined);
+    const theirs = s.invoices.filter((i) => i.customerCode === sc.code);
+    if (!customer) {
+      customer = await store.insert("customers", {
+        company_name: sc.name,
+        contact_person: null,
+        email: sc.email,
+        phone: sc.phone,
+        whatsapp_number: null,
+        country: null,
+        preferred_language: org.language,
+        payment_terms_days: org.default_payment_terms_days,
+        credit_limit: null,
+        currency: theirs.find((i) => !i.opening)?.currency ?? org.default_currency,
+        notes: [sc.code && `Cari kod: ${sc.code}`, sc.taxId && `VKN/TCKN: ${sc.taxId}`].filter(Boolean).join(" · ") || null,
+        account_manager_id: null,
+        shipments_on_hold: false,
+      });
+      byName.set(key(sc.name), customer);
+      result.createdCustomers += 1;
+    } else if (!customer.email && sc.email) {
+      customer = await store.update("customers", customer.id, { email: sc.email });
+    }
+    customerFor.set(sc.code, customer);
+    touched.add(customer.id);
+    const hadErpHistory = invoices.some((i) => i.customer_id === customer.id && i.source === "ERP");
+
+    for (const si of theirs) {
+      const existing = invByNumber.get(key(si.number));
+      if (existing) {
+        if (existing.customer_id !== customer.id || existing.currency !== si.currency) {
+          result.skipped += 1;
+          result.warnings.push(tr ? `${si.number}: başka bir müşteride/para biriminde zaten kayıtlı, atlandı` : `${si.number}: already exists for another customer or currency, skipped`);
+          continue;
+        }
+        invoiceFor.set(`${si.customerCode}|${si.number}`, existing);
+        const paid = Math.min(existing.amount, Math.max(existing.paid_amount, si.paid));
+        if (paid > existing.paid_amount + 0.005) {
+          const next = { ...existing, paid_amount: paid };
+          const status = deriveStatus(next, asOf);
+          const updated = await store.update("invoices", existing.id, { paid_amount: paid, status, ...(status === "PAID" ? { collection_stage: "NONE" as const } : {}), updated_at: new Date().toISOString() });
+          invoiceFor.set(`${si.customerCode}|${si.number}`, updated);
+          result.updatedInvoices += 1;
+        }
+        continue;
+      }
+      if (si.opening && hadErpHistory) {
+        result.skipped += 1;
+        result.warnings.push(tr ? `${sc.name}: devir bakiyesi atlandı (önceki ekstre zaten içe aktarılmış)` : `${sc.name}: opening balance skipped (an earlier statement was already imported)`);
+        continue;
+      }
+      const base: Invoice = {
+        id: "",
+        created_at: "",
+        organization_id: org.id,
+        customer_id: customer.id,
+        invoice_number: si.number,
+        invoice_date: si.issueDate,
+        due_date: si.dueDate,
+        currency: si.currency,
+        amount: si.amount,
+        paid_amount: Math.min(si.paid, si.amount),
+        status: "SENT",
+        collection_stage: "NONE",
+        assigned_user_id: null,
+        description: si.description?.slice(0, 500) ?? null,
+        last_reminder_stage: null,
+        last_reminder_at: null,
+        document_path: null,
+        document_name: null,
+        external_ref: null,
+        source: "ERP",
+        updated_at: new Date().toISOString(),
+      };
+      const { id: _i, created_at: _c, organization_id: _o, ...rest } = { ...base, status: deriveStatus(base, asOf) };
+      void _i;
+      void _c;
+      void _o;
+      const stored = await store.insert("invoices", rest);
+      invByNumber.set(key(si.number), stored);
+      invoiceFor.set(`${si.customerCode}|${si.number}`, stored);
+      result.importedInvoices += 1;
+    }
+  }
+
+  const recordPaymentRow = async (customerId: string, ref: string, date: string, currency: Invoice["currency"], amount: number, invoice: Invoice | null) => {
+    const k = paymentKey(ref, date, amount, invoice?.id ?? null);
+    if (seenPayments.has(k)) return;
+    seenPayments.add(k);
+    await store.insert("payments", {
+      customer_id: customerId,
+      payment_date: date,
+      amount,
+      currency,
+      reference: ref,
+      matched_invoice_id: invoice?.id ?? null,
+      status: invoice ? (invoice.paid_amount >= invoice.amount - 0.005 ? "MATCHED" : "PARTIAL") : "UNMATCHED",
+      source: "BANK_IMPORT",
+      bank_transaction_id: null,
+      suggested_invoice_id: null,
+      suggested_confidence: null,
+      suggestion_reasons: null,
+    });
+    result.recordedPayments += 1;
+  };
+
+  for (const a of s.allocations) {
+    const customer = customerFor.get(a.customerCode);
+    const invoice = invoiceFor.get(`${a.customerCode}|${a.invoiceNumber}`);
+    if (!customer || !invoice) continue; // e.g. its opening balance was skipped
+    await recordPaymentRow(customer.id, a.reference, a.date, a.currency, a.amount, invoice);
+  }
+  for (const u of s.unapplied) {
+    const customer = customerFor.get(u.customerCode);
+    if (customer) await recordPaymentRow(customer.id, u.reference, u.date, u.currency, u.amount, null);
+  }
+
+  await audit(store, { user_id: ctx.user.id, action: "invoices.import", entity_type: "invoice", details: { source: "ERP", imported: result.importedInvoices, updated: result.updatedInvoices, payments: result.recordedPayments, createdCustomers: result.createdCustomers } });
+  for (const id of touched) {
+    const c = await store.get("customers", id);
+    if (c) await refreshCustomerRisk(ctx, c);
+  }
+  return result;
+}

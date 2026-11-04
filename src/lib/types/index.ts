@@ -218,7 +218,7 @@ export interface Invoice extends OrgRow {
   document_name: string | null;
   /** e-Fatura ETTN (UUID) when imported from UBL-TR XML; used to skip duplicates. */
   external_ref: string | null;
-  source: "MANUAL" | "CSV" | "EFATURA" | "DEMO";
+  source: "MANUAL" | "CSV" | "EFATURA" | "ERP" | "DEMO";
 }
 
 export interface Payment extends OrgRow {

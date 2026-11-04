@@ -8,7 +8,8 @@ import { today } from "@/lib/domain/dates";
 import { deriveStatus } from "@/lib/domain/invoices";
 import { audit } from "@/lib/services/audit";
 import { refreshCustomerRisk } from "@/lib/services/collection-service";
-import { importInvoices, validateInvoiceCsv, type CsvValidation } from "@/lib/services/import-service";
+import { importAccountStatement, importInvoices, validateInvoiceCsv, type CsvValidation } from "@/lib/services/import-service";
+import { parseAccountStatement } from "@/lib/domain/cari-ekstre";
 import type { Invoice } from "@/lib/types";
 import { invoiceSchema, issuesToMessage, type InvoiceCsvRow } from "@/lib/validation";
 import type { FormState } from "./customers";
@@ -221,5 +222,28 @@ export async function removeInvoiceDocumentAction(invoiceId: string): Promise<{ 
     return { ok: true };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "remove failed" };
+  }
+}
+
+export interface StatementImportActionResult {
+  ok: boolean;
+  error?: string;
+  data?: Awaited<ReturnType<typeof importAccountStatement>>;
+}
+
+/** Imports an ERP account statement (cari ekstre XML). The client previews it; the server re-parses it. */
+export async function importAccountStatementAction(xml: string): Promise<StatementImportActionResult> {
+  if (typeof xml !== "string" || xml.length === 0) return { ok: false, error: "XML is required" };
+  if (Buffer.byteLength(xml, "utf8") > 4 * 1024 * 1024) return { ok: false, error: "XML must be 4 MB or smaller" };
+  try {
+    const ctx = await requireContext();
+    assertCanEdit(ctx);
+    const parsed = parseAccountStatement(xml);
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+    const data = await importAccountStatement(ctx, parsed.statement);
+    for (const p of ["/invoices", "/customers", "/payments", "/dashboard", "/inbox"]) revalidatePath(p);
+    return { ok: true, data };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "import failed" };
   }
 }
