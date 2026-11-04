@@ -10,6 +10,8 @@ import { requireContext } from "@/lib/db";
 import { INVOICE_CSV_SAMPLE } from "@/lib/services/import-service";
 
 export const metadata = { title: "Import invoices" };
+/** Large statements do many writes; give the server action room on serverless hosts. */
+export const maxDuration = 60;
 
 const COPY = {
   tr: { title: "Fatura içe aktar", subtitle: "ERP cari ekstresi, e-Fatura XML veya CSV ile faturalarınızı ve tahsilatlarınızı yükleyin", erp: "ERP cari ekstre", csv: "CSV", efatura: "e-Fatura XML" },
@@ -39,7 +41,7 @@ export default async function ImportInvoicesPage() {
           <TabsTrigger value="efatura">{COPY[locale].efatura}</TabsTrigger>
         </TabsList>
         <TabsContent value="erp">
-          <StatementImport locale={locale} />
+          <StatementImport locale={locale} demo={ctx.demo} />
         </TabsContent>
         <TabsContent value="csv">
           <CsvImport t={t} locale={locale} sample={INVOICE_CSV_SAMPLE} />

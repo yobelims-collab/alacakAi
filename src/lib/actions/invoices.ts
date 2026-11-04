@@ -9,7 +9,7 @@ import { deriveStatus } from "@/lib/domain/invoices";
 import { audit } from "@/lib/services/audit";
 import { refreshCustomerRisk } from "@/lib/services/collection-service";
 import { importAccountStatement, importInvoices, validateInvoiceCsv, type CsvValidation } from "@/lib/services/import-service";
-import { parseAccountStatement } from "@/lib/domain/cari-ekstre";
+import { parseStatementFile } from "@/lib/domain/cari-ekstre-excel";
 import type { Invoice } from "@/lib/types";
 import { invoiceSchema, issuesToMessage, type InvoiceCsvRow } from "@/lib/validation";
 import type { FormState } from "./customers";
@@ -231,14 +231,15 @@ export interface StatementImportActionResult {
   data?: Awaited<ReturnType<typeof importAccountStatement>>;
 }
 
-/** Imports an ERP account statement (cari ekstre XML). The client previews it; the server re-parses it. */
-export async function importAccountStatementAction(xml: string): Promise<StatementImportActionResult> {
-  if (typeof xml !== "string" || xml.length === 0) return { ok: false, error: "XML is required" };
-  if (Buffer.byteLength(xml, "utf8") > 4 * 1024 * 1024) return { ok: false, error: "XML must be 4 MB or smaller" };
+/** Imports an ERP account statement file (cari ekstre XML or Excel). The client previews it; the server re-parses it. */
+export async function importAccountStatementAction(formData: FormData): Promise<StatementImportActionResult> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Dosya gerekli / file is required" };
+  if (file.size > 4 * 1024 * 1024) return { ok: false, error: "Dosya en fazla 4 MB olabilir / file must be 4 MB or smaller" };
   try {
     const ctx = await requireContext();
     assertCanEdit(ctx);
-    const parsed = parseAccountStatement(xml);
+    const parsed = await parseStatementFile(file.name, new Uint8Array(await file.arrayBuffer()));
     if (!parsed.ok) return { ok: false, error: parsed.error };
     const data = await importAccountStatement(ctx, parsed.statement);
     for (const p of ["/invoices", "/customers", "/payments", "/dashboard", "/inbox"]) revalidatePath(p);

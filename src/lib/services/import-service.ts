@@ -4,7 +4,7 @@ import type { AppContext } from "@/lib/db";
 import { today } from "@/lib/domain/dates";
 import { deriveStatus } from "@/lib/domain/invoices";
 import type { ParsedStatement } from "@/lib/domain/cari-ekstre";
-import type { Customer, Invoice } from "@/lib/types";
+import type { Customer, Invoice, Payment } from "@/lib/types";
 import { bankCsvRowSchema, invoiceCsvRowSchema, type BankCsvRow, type InvoiceCsvRow } from "@/lib/validation";
 import { audit } from "./audit";
 import { refreshCustomerRisk } from "./collection-service";
@@ -181,6 +181,7 @@ export async function importAccountStatement(ctx: AppContext, s: ParsedStatement
   const touched = new Set<string>();
   const customerFor = new Map<string, Customer>();
   const invoiceFor = new Map<string, Invoice>(); // `${customerCode}|${number}` → stored invoice
+  const pending: { k: string; row: Omit<Invoice, "id" | "created_at" | "organization_id"> }[] = [];
 
   for (const sc of s.customers) {
     let customer = byName.get(key(sc.name)) ?? (sc.email ? byEmail.get(key(sc.email)) : undefined);
@@ -261,18 +262,21 @@ export async function importAccountStatement(ctx: AppContext, s: ParsedStatement
       void _i;
       void _c;
       void _o;
-      const stored = await store.insert("invoices", rest);
-      invByNumber.set(key(si.number), stored);
-      invoiceFor.set(`${si.customerCode}|${si.number}`, stored);
-      result.importedInvoices += 1;
+      pending.push({ k: `${si.customerCode}|${si.number}`, row: rest });
+      invByNumber.set(key(si.number), { ...base, ...rest });
     }
   }
+  // One round trip per table instead of one per row (keeps big statements fast on serverless).
+  const stored = pending.length ? await store.insertMany("invoices", pending.map((p) => p.row)) : [];
+  stored.forEach((inv, i) => invoiceFor.set(pending[i].k, inv));
+  result.importedInvoices = stored.length;
 
+  const newPayments: Omit<Payment, "id" | "created_at" | "organization_id">[] = [];
   const recordPaymentRow = async (customerId: string, ref: string, date: string, currency: Invoice["currency"], amount: number, invoice: Invoice | null) => {
     const k = paymentKey(ref, date, amount, invoice?.id ?? null);
     if (seenPayments.has(k)) return;
     seenPayments.add(k);
-    await store.insert("payments", {
+    newPayments.push({
       customer_id: customerId,
       payment_date: date,
       amount,
@@ -286,7 +290,6 @@ export async function importAccountStatement(ctx: AppContext, s: ParsedStatement
       suggested_confidence: null,
       suggestion_reasons: null,
     });
-    result.recordedPayments += 1;
   };
 
   for (const a of s.allocations) {
@@ -299,6 +302,9 @@ export async function importAccountStatement(ctx: AppContext, s: ParsedStatement
     const customer = customerFor.get(u.customerCode);
     if (customer) await recordPaymentRow(customer.id, u.reference, u.date, u.currency, u.amount, null);
   }
+
+  if (newPayments.length) await store.insertMany("payments", newPayments);
+  result.recordedPayments = newPayments.length;
 
   await audit(store, { user_id: ctx.user.id, action: "invoices.import", entity_type: "invoice", details: { source: "ERP", imported: result.importedInvoices, updated: result.updatedInvoices, payments: result.recordedPayments, createdCustomers: result.createdCustomers } });
   for (const id of touched) {

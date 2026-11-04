@@ -104,16 +104,38 @@ function day(v: unknown): string | null {
   return `${m[1]}-${m[2]}-${m[3]}`;
 }
 
-function currencyOf(row: Node): Currency | null {
-  const raw = (str(row.BELGE_KUR_KOD) || str(row.KUR_KOD) || "TRY").toUpperCase();
-  const c = raw === "TL" || raw === "YTL" || raw === "TRL" ? "TRY" : raw;
+const fold = (s: string) => s.replace(/[ıİ]/g, "i").toUpperCase();
+
+/** One ledger line, independent of the file format it came from. */
+export interface StatementLine {
+  code: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  taxId: string | null;
+  /** True for the opening-balance (devir) line. */
+  opening: boolean;
+  date: string | null;
+  docNo: string;
+  /** KAYNAK column (Fatura, Finans, MuhasebeKurDeğerleme…), informational. */
+  source: string;
+  text: string;
+  dueDate: string | null;
+  averageDueDate: string | null;
+  /** Raw currency code from the file (EUR, TL…); null when the line has none. */
+  currencyRaw: string | null;
+  debit: number;
+  credit: number;
+}
+
+export function normalizeCurrency(raw: string | null | undefined): Currency | null {
+  const r = (raw ?? "").trim().toUpperCase() || "TRY";
+  const c = r === "TL" || r === "YTL" || r === "TRL" || r === "₺" ? "TRY" : r === "€" ? "EUR" : r === "$" ? "USD" : r;
   return (CURRENCIES as string[]).includes(c) ? (c as Currency) : null;
 }
 
-const fold = (s: string) => s.replace(/[ıİ]/g, "i").toUpperCase();
-
 export function parseAccountStatement(xml: string): StatementResult {
-  const src = xml.replace(/^﻿/, "").trim();
+  const src = xml.replace(/^\uFEFF/, "").trim();
   if (!src.startsWith("<")) return { ok: false, error: "XML bekleniyor / XML expected" };
   if (/<!DOCTYPE|<!ENTITY/i.test(src)) return { ok: false, error: "DOCTYPE/ENTITY bildirimleri desteklenmiyor / DOCTYPE is not allowed" };
   const valid = XMLValidator.validate(src);
@@ -128,8 +150,29 @@ export function parseAccountStatement(xml: string): StatementResult {
   const root = doc.NewDataSet as Node | undefined;
   const rows = (root?.CARI_EKSTRE as Node[] | undefined) ?? [];
   if (!root || rows.length === 0) return { ok: false, error: "Cari ekstre satırı bulunamadı (CARI_EKSTRE) / no account statement rows found" };
-
   const param = (root.RAPOR_PARAM as Node | undefined) ?? {};
+  const lines: StatementLine[] = rows.map((row) => ({
+    code: str(row.CARI_KOD) || str(row.CARI_AD),
+    name: str(row.CARI_AD),
+    email: str(row.CARI_E_MAIL).toLowerCase() || null,
+    phone: str(row.CARI_TEL_1) || null,
+    taxId: str(row.VERGI_NO) || str(row.TCKN) || null,
+    opening: str(row.TIP) === "BASLANGIC_DEVIR",
+    date: day(row.BELGE_TARIH),
+    docNo: str(row.BELGE_NO),
+    source: str(row.KAYNAK),
+    text: [row.D_ACIKLAMA_1, row.D_ACIKLAMA_2, row.M_ACIKLAMA_1, row.M_ACIKLAMA_2].map(str).filter(Boolean).join(" · "),
+    dueDate: day(row.BORC_VADE),
+    averageDueDate: day(row.ORTALAMA_VADE),
+    currencyRaw: str(row.BELGE_KUR_KOD) || str(row.KUR_KOD) || null,
+    debit: round2(num(row.BORC_TUTAR)),
+    credit: round2(num(row.ALACAK_TUTAR)),
+  }));
+  return { ok: true, statement: buildStatement(lines, { from: day(param.RAPOR_BAS_TARIH), to: day(param.RAPOR_BIT_TARIH) }) };
+}
+
+/** Turns ledger lines (from XML or Excel) into invoices, credits and allocations. */
+export function buildStatement(lines: StatementLine[], period: ParsedStatement["period"]): ParsedStatement {
   const warnings: string[] = [];
   const customers = new Map<string, StatementCustomer>();
   const invoices: StatementInvoice[] = [];
@@ -137,31 +180,23 @@ export function parseAccountStatement(xml: string): StatementResult {
   const credits: StatementCredit[] = [];
   let ignored = 0;
 
-  for (const row of rows) {
-    const code = str(row.CARI_KOD) || str(row.CARI_AD);
-    const name = str(row.CARI_AD);
+  for (const row of lines) {
+    const { code, name, debit, credit, text, docNo, date } = row;
     if (!code || !name) {
       ignored += 1;
       continue;
     }
-    if (!customers.has(code)) {
-      customers.set(code, {
-        code,
-        name,
-        email: str(row.CARI_E_MAIL).toLowerCase() || null,
-        phone: str(row.CARI_TEL_1) || null,
-        taxId: str(row.VERGI_NO) || str(row.TCKN) || null,
-      });
+    const known = customers.get(code);
+    if (!known) customers.set(code, { code, name, email: row.email, phone: row.phone, taxId: row.taxId });
+    else {
+      known.email ??= row.email;
+      known.phone ??= row.phone;
+      known.taxId ??= row.taxId;
     }
-    const currency = currencyOf(row);
-    const date = day(row.BELGE_TARIH);
-    const debit = round2(num(row.BORC_TUTAR));
-    const credit = round2(num(row.ALACAK_TUTAR));
-    const text = [row.D_ACIKLAMA_1, row.D_ACIKLAMA_2, row.M_ACIKLAMA_1, row.M_ACIKLAMA_2].map(str).filter(Boolean).join(" · ");
-    const docNo = str(row.BELGE_NO);
+    const currency = normalizeCurrency(row.currencyRaw);
 
     if (!currency) {
-      if (debit || credit) warnings.push(`${docNo}: para birimi desteklenmiyor / unsupported currency ${str(row.KUR_KOD)}`);
+      if (debit || credit) warnings.push(`${docNo}: para birimi desteklenmiyor / unsupported currency ${row.currencyRaw}`);
       ignored += 1;
       continue;
     }
@@ -170,14 +205,14 @@ export function parseAccountStatement(xml: string): StatementResult {
       continue;
     }
 
-    if (str(row.TIP) === "BASLANGIC_DEVIR") {
+    if (row.opening) {
       const net = round2(debit - credit);
       if (net > 0.005) {
         const inv: StatementInvoice = {
           customerCode: code,
           number: `DEVIR-${code.replace(/\s+/g, "")}-${currency}-${date}`,
           issueDate: date,
-          dueDate: day(row.ORTALAMA_VADE) ?? date,
+          dueDate: row.averageDueDate ?? row.dueDate ?? date,
           currency,
           amount: net,
           paid: 0,
@@ -206,7 +241,7 @@ export function parseAccountStatement(xml: string): StatementResult {
           customerCode: code,
           number: docNo,
           issueDate: date,
-          dueDate: day(row.BORC_VADE) ?? day(row.ORTALAMA_VADE) ?? date,
+          dueDate: row.dueDate ?? row.averageDueDate ?? date,
           currency,
           amount: debit,
           paid: 0,
@@ -246,18 +281,7 @@ export function parseAccountStatement(xml: string): StatementResult {
   }
   if (unapplied.length) warnings.push(`${unapplied.length} tahsilat açık borçtan fazla (avans) / ${unapplied.length} credit(s) exceed the open debt (advance payment)`);
 
-  return {
-    ok: true,
-    statement: {
-      customers: [...customers.values()],
-      invoices,
-      allocations,
-      unapplied,
-      period: { from: day(param.RAPOR_BAS_TARIH), to: day(param.RAPOR_BIT_TARIH) },
-      ignoredRows: ignored,
-      warnings,
-    },
-  };
+  return { customers: [...customers.values()], invoices, allocations, unapplied, period, ignoredRows: ignored, warnings };
 }
 
 /** Open balance per currency for one customer (for previews and checks). */
