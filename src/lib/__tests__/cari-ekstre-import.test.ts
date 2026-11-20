@@ -57,3 +57,23 @@ describe("importAccountStatement (memory mode)", () => {
     expect((await ctx.store.list("invoices")).length).toBe(8);
   });
 });
+
+describe("importStatementAttachments (automatic import by email)", () => {
+  it("imports statement attachments and records every outcome in the audit log", async () => {
+    const { importStatementAttachments, EMAIL_IMPORT_ACTION } = await import("@/lib/services/import-service");
+    const ctx = await context();
+    const results = await importStatementAttachments(ctx, "erp@seller.example", [
+      { filename: "Cari Ekstre.xml", bytes: new TextEncoder().encode(STATEMENT_XML) },
+      { filename: "broken.xlsx", bytes: new TextEncoder().encode("not a workbook") },
+    ]);
+    expect(results.map((r) => r.ok)).toEqual([true, false]);
+    expect(results[0].result).toMatchObject({ importedInvoices: 8, createdCustomers: 1 });
+    expect((await ctx.store.list("invoices")).length).toBe(8);
+
+    const none = await importStatementAttachments(ctx, "erp@seller.example", []);
+    expect(none[0]).toMatchObject({ ok: false });
+    const logs = await ctx.store.list("audit_logs", { where: { action: EMAIL_IMPORT_ACTION } });
+    expect(logs).toHaveLength(3);
+    expect(logs.find((l) => l.details?.ok === true)?.details).toMatchObject({ from: "erp@seller.example", file: "Cari Ekstre.xml", imported: 8 });
+  });
+});

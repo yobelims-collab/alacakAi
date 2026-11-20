@@ -33,6 +33,7 @@ create your own (empty or demo-seeded) company. Demo data lives in the Node proc
 | `SESSION_SECRET` | recommended | Signs the demo-mode session cookie. |
 | `RESEND_API_KEY` | no | Real email sending. Missing ⇒ messages recorded as *simulated*. |
 | `RESEND_WEBHOOK_SECRET` | for email replies | Signing secret (`whsec_…`) of the Resend `email.received` webhook. |
+| `INBOUND_IMPORT_SECRET` | for ERP import by email | Long random string; derives each company's secret `import+<orgId>.<token>@` address (falls back to `SESSION_SECRET`). |
 | `INBOUND_EMAIL_DOMAIN` | for email replies | Receiving domain, e.g. `reply.yourdomain.com`; outbound mail gets `Reply-To: reply+<orgId>@` this domain. |
 | `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID` | no | WhatsApp Cloud API sending. Missing ⇒ simulated. |
 
@@ -97,6 +98,7 @@ Financial state only ever changes from validated structured objects, never from 
 | Email | Resend via `RESEND_API_KEY` (else simulated) | Verify a sending domain; set `sender_email` in Settings → Communication. |
 | WhatsApp | Meta Cloud API via token + phone id (else simulated) | Approved templates for outbound; point the webhook to `/api/inbound/whatsapp`. |
 | Email replies | Resend adapter `/api/inbound/resend` (Svix-verified; strips quoted history, finds the invoice number, matches the sender to a customer/contact) | In Resend: add a receiving domain (MX), create a webhook for `email.received` → `https://<app>/api/inbound/resend`, set `RESEND_WEBHOOK_SECRET` + `INBOUND_EMAIL_DOMAIN`. |
+| ERP import by email | Same Resend webhook: mail to `import+<orgId>.<token>@INBOUND_EMAIL_DOMAIN` has its XML/Excel attachments (Cari Ekstre) imported for that company; history on Invoices → Import | Set `INBOUND_IMPORT_SECRET`; the company schedules the Cari Ekstre report in its ERP to email that address daily. |
 | Other inbound | `/api/inbound/email` & `/api/inbound/whatsapp` (JSON: organization_id, from, text, invoice_number?) | Map any other provider's payload to this shape. |
 | Bank | CSV import + matcher (`bank_transactions`) | Add an adapter that writes `bank_transactions`, then reuse `importBankTransactions`. |
 | AI | OpenAI (optional) | Set `OPENAI_API_KEY`; outputs are validated identically. |

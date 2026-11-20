@@ -17,6 +17,8 @@ export const env = {
   resendWebhookSecret: (process.env.RESEND_WEBHOOK_SECRET ?? "").trim(),
   /** Receiving domain for customer replies, e.g. reply.alacore.app (reply+<orgId>@domain). */
   inboundEmailDomain: (process.env.INBOUND_EMAIL_DOMAIN ?? "").trim().toLowerCase(),
+  /** Secret for the per-company ERP import address (falls back to SESSION_SECRET; empty disables it). */
+  importSecret: (process.env.INBOUND_IMPORT_SECRET ?? process.env.SESSION_SECRET ?? "").trim(),
   whatsappToken: process.env.WHATSAPP_ACCESS_TOKEN ?? "",
   whatsappPhoneId: process.env.WHATSAPP_PHONE_NUMBER_ID ?? "",
 };

@@ -5,6 +5,9 @@ import { clientIp, rateLimit } from "@/lib/rate-limit";
 import {
   decodeDataUri,
   extractReplyText,
+  isStatementAttachment,
+  isTrustedAttachmentUrl,
+  organizationFromImportRecipients,
   findInvoiceNumber,
   htmlToText,
   organizationFromRecipients,
@@ -12,6 +15,7 @@ import {
   verifySvixSignature,
 } from "@/lib/domain/inbound-email";
 import { processInboundReply } from "@/lib/services/collection-service";
+import { importStatementAttachments } from "@/lib/services/import-service";
 import { systemContextFor } from "@/lib/services/system-context";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +28,9 @@ export const dynamic = "force-dynamic";
  * 4. Matches the sender to a customer/contact and hands the text to processInboundReply,
  *    which classifies it and puts a reply draft in the Inbox for human approval.
  * Non-actionable mail is acknowledged with 200 so Resend does not retry it forever.
+ *
+ * A mail to `import+<orgId>.<token>@INBOUND_EMAIL_DOMAIN` is instead an automatic ERP import:
+ * its XML/Excel attachments (the scheduled "Cari Ekstre" report) are imported for that company.
  */
 const eventSchema = z.object({
   type: z.string(),
@@ -79,7 +86,14 @@ export async function POST(req: NextRequest) {
   if (svix.id && alreadySeen(svix.id)) return ignored("duplicate delivery");
 
   const d = event.data.data;
-  const orgId = organizationFromRecipients([...(d.received_for ?? []), ...d.to, ...(d.cc ?? [])], env.inboundEmailDomain);
+  const recipients = [...(d.received_for ?? []), ...d.to, ...(d.cc ?? [])];
+  const importOrg = organizationFromImportRecipients(recipients, env.inboundEmailDomain, env.importSecret);
+  if (importOrg) {
+    const res = await handleStatementImport(importOrg, d.email_id, d.from);
+    if (res.status >= 500 && svix.id) seen.delete(svix.id); // let Resend retry a temporary failure
+    return res;
+  }
+  const orgId = organizationFromRecipients(recipients, env.inboundEmailDomain);
   if (!orgId) return ignored("no reply+ recipient");
   const ctx = await systemContextFor(orgId);
   if (!ctx) return ignored("organization not found");
@@ -116,4 +130,39 @@ export async function POST(req: NextRequest) {
   const result = await processInboundReply(ctx, { customerId, invoiceId, channel: "EMAIL", body: text, source: "webhook" });
   await ctx.store.update("communications", result.communication.id, { subject: subject.slice(0, 300) || null, provider_message_id: d.email_id });
   return NextResponse.json({ ok: true, communication_id: result.communication.id, intent: result.classification.intent, escalated: result.escalated });
+}
+
+const MAX_ATTACHMENT_BYTES = 4 * 1024 * 1024;
+const attachmentListSchema = z.object({
+  data: z.array(z.object({ id: z.string(), filename: z.string().max(300).nullish(), size: z.number().nullish(), download_url: z.string().url() })).max(50),
+});
+
+/** Downloads the statement attachments of a received email and imports them for the organization. */
+async function handleStatementImport(orgId: string, emailId: string, from: string) {
+  const ctx = await systemContextFor(orgId);
+  if (!ctx) return ignored("organization not found");
+  if (!env.resendApiKey) return NextResponse.json({ error: "RESEND_API_KEY missing" }, { status: 503 });
+
+  const list = await fetch(`https://api.resend.com/emails/receiving/${encodeURIComponent(emailId)}/attachments?limit=50`, {
+    headers: { Authorization: `Bearer ${env.resendApiKey}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  }).catch(() => null);
+  if (!list?.ok) return NextResponse.json({ error: "could not list attachments" }, { status: 502 });
+  const parsed = attachmentListSchema.safeParse(await list.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "unexpected attachment list" }, { status: 502 });
+
+  const files: { filename: string; bytes: Uint8Array }[] = [];
+  for (const a of parsed.data.data) {
+    const filename = (a.filename ?? "").trim();
+    if (!isStatementAttachment(filename) || (a.size ?? 0) > MAX_ATTACHMENT_BYTES || !isTrustedAttachmentUrl(a.download_url)) continue;
+    const res = await fetch(a.download_url, { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(20_000) }).catch(() => null);
+    if (!res?.ok) return NextResponse.json({ error: "could not download attachment" }, { status: 502 });
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.byteLength > MAX_ATTACHMENT_BYTES) continue;
+    files.push({ filename, bytes: buf });
+  }
+
+  const results = await importStatementAttachments(ctx, parseAddress(from).email, files);
+  return NextResponse.json({ ok: true, import: results.map((r) => ({ file: r.file, ok: r.ok, error: r.error ?? null, invoices: r.result?.importedInvoices ?? 0, payments: r.result?.recordedPayments ?? 0 })) });
 }

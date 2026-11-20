@@ -116,3 +116,45 @@ export function verifySvixSignature(
   }
   return false;
 }
+
+/**
+ * Automatic ERP import by email: each organization gets `import+<orgId>.<token>@<domain>`.
+ * The token is an HMAC of the organization id with a server secret, so the address cannot be
+ * guessed from the organization id alone (anyone who has it can upload statements to that company).
+ */
+export function importToken(organizationId: string, secret: string): string {
+  return createHmac("sha256", secret).update(`erp-import:${organizationId.toLowerCase()}`).digest("hex").slice(0, 20);
+}
+
+export function importAddress(organizationId: string, secret: string, domain: string): string {
+  return `import+${organizationId.toLowerCase()}.${importToken(organizationId, secret)}@${domain}`;
+}
+
+/** Finds a valid `import+<uuid>.<token>@domain` recipient; returns the organization id only if the token matches. */
+export function organizationFromImportRecipients(recipients: string[], domain: string, secret: string): string | null {
+  if (!secret) return null;
+  const d = domain.trim().toLowerCase();
+  for (const r of recipients) {
+    const [local, host] = parseAddress(r).email.split("@");
+    if (!local || !host || (d && host !== d)) continue;
+    const m = local.match(/^import\+([0-9a-f-]{36})\.([0-9a-f]{20})$/i);
+    if (!m || !UUID.test(m[1])) continue;
+    const expected = Buffer.from(importToken(m[1], secret));
+    const given = Buffer.from(m[2].toLowerCase());
+    if (given.length === expected.length && timingSafeEqual(given, expected)) return m[1].toLowerCase();
+  }
+  return null;
+}
+
+/** Statement files we accept from email attachments. */
+export const isStatementAttachment = (filename: string) => /\.(xml|xlsx|xlsm|xls|ods)$/i.test(filename);
+
+/** Resend serves received attachments from a signed CDN URL; never fetch anything else (SSRF guard). */
+export function isTrustedAttachmentUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" && (u.hostname === "inbound-cdn.resend.com" || u.hostname.endsWith(".resend.com"));
+  } catch {
+    return false;
+  }
+}

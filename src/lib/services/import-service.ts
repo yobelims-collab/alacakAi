@@ -4,6 +4,7 @@ import type { AppContext } from "@/lib/db";
 import { today } from "@/lib/domain/dates";
 import { deriveStatus } from "@/lib/domain/invoices";
 import type { ParsedStatement } from "@/lib/domain/cari-ekstre";
+import { parseStatementFile } from "@/lib/domain/cari-ekstre-excel";
 import type { Customer, Invoice, Payment } from "@/lib/types";
 import { bankCsvRowSchema, invoiceCsvRowSchema, type BankCsvRow, type InvoiceCsvRow } from "@/lib/validation";
 import { audit } from "./audit";
@@ -312,4 +313,42 @@ export async function importAccountStatement(ctx: AppContext, s: ParsedStatement
     if (c) await refreshCustomerRisk(ctx, c);
   }
   return result;
+}
+
+export interface EmailImportFileResult {
+  file: string;
+  ok: boolean;
+  error?: string;
+  result?: ImportStatementResult;
+}
+
+/** Audit action used for automatic statement imports received by email (shown on the import page). */
+export const EMAIL_IMPORT_ACTION = "statement.email_import";
+
+/**
+ * Imports ERP statement files received as email attachments (the scheduled "Cari Ekstre" mail).
+ * Each file is parsed like a manual upload; every outcome — success, unreadable file, no attachment —
+ * is written to the audit log so the company sees the history on the import page.
+ */
+export async function importStatementAttachments(ctx: AppContext, from: string, files: { filename: string; bytes: Uint8Array }[]): Promise<EmailImportFileResult[]> {
+  const results: EmailImportFileResult[] = [];
+  if (!files.length) {
+    results.push({ file: "—", ok: false, error: "XML/Excel eki bulunamadı / no XML or Excel attachment" });
+  }
+  for (const f of files) {
+    const parsed = await parseStatementFile(f.filename, f.bytes);
+    if (!parsed.ok) {
+      results.push({ file: f.filename, ok: false, error: parsed.error });
+      continue;
+    }
+    try {
+      results.push({ file: f.filename, ok: true, result: await importAccountStatement(ctx, parsed.statement) });
+    } catch (e) {
+      results.push({ file: f.filename, ok: false, error: e instanceof Error ? e.message : "import failed" });
+    }
+  }
+  for (const r of results) {
+    await audit(ctx.store, { user_id: null, action: EMAIL_IMPORT_ACTION, entity_type: "statement", details: { from, file: r.file, ok: r.ok, error: r.error ?? null, ...(r.result ? { imported: r.result.importedInvoices, updated: r.result.updatedInvoices, payments: r.result.recordedPayments, customers: r.result.createdCustomers } : {}) } });
+  }
+  return results;
 }
