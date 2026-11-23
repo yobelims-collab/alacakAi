@@ -11,11 +11,11 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/types";
 
 const COPY = {
-  tr: { title: "Hesabınıza giriş yapın", subtitle: "Alacaklarınızı takip etmeye devam edin.", credentials: "Demo bilgileri" },
-  en: { title: "Sign in to your account", subtitle: "Pick up where you left off with your receivables.", credentials: "Demo credentials" },
+  tr: { title: "Hesabınıza giriş yapın", subtitle: "Alacaklarınızı takip etmeye devam edin.", credentials: "Demo bilgileri", forgot: "Şifremi unuttum", link: "E-posta bağlantısı bu tarayıcıda oturum açamadı. E-postanız doğrulandıysa aşağıdan giriş yapabilirsiniz." },
+  en: { title: "Sign in to your account", subtitle: "Pick up where you left off with your receivables.", credentials: "Demo credentials", forgot: "Forgot password?", link: "The email link could not sign you in on this browser. If your email is confirmed, sign in below." },
 };
 
-export function LoginForm({ t, locale, demo, highlightDemo }: { t: Dictionary; locale: Locale; demo: boolean; highlightDemo: boolean }) {
+export function LoginForm({ t, locale, demo, highlightDemo, linkNotice = false }: { t: Dictionary; locale: Locale; demo: boolean; highlightDemo: boolean; linkNotice?: boolean }) {
   const [state, formAction] = useActionState<ActionState, FormData>(signInAction, {});
   const c = COPY[locale];
 
@@ -49,6 +49,7 @@ export function LoginForm({ t, locale, demo, highlightDemo }: { t: Dictionary; l
         <CardDescription>{c.subtitle}</CardDescription>
       </CardHeader>
       <CardContent>
+        {linkNotice && <p className="mb-4 rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">{c.link}</p>}
         <form action={formAction} className="flex flex-col gap-4">
           <Field label={t.auth.email}>
             <Input name="email" type="email" autoComplete="email" required placeholder="ad@sirket.com" />
@@ -56,6 +57,11 @@ export function LoginForm({ t, locale, demo, highlightDemo }: { t: Dictionary; l
           <Field label={t.auth.password}>
             <Input name="password" type="password" autoComplete="current-password" required />
           </Field>
+          {!demo && (
+            <Link href="/forgot-password" className="-mt-2 self-end text-xs text-muted-foreground underline-offset-4 hover:underline">
+              {c.forgot}
+            </Link>
+          )}
           {state.error && <p className="rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-800 dark:text-red-200">{state.error}</p>}
           <SubmitButton variant={highlightDemo && demo ? "outline" : "brand"} className="w-full">
             {t.auth.signIn}

@@ -6,10 +6,10 @@ import { getT } from "@/lib/i18n";
 
 export const metadata = { title: "Sign in" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ demo?: string | string[] }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ demo?: string | string[]; link?: string | string[] }> }) {
   const user = await getSessionUser();
   if (user) redirect(user.organization_id ? "/inbox" : "/onboarding");
-  const { demo } = await searchParams;
+  const { demo, link } = await searchParams;
   const { t, locale } = await getT();
-  return <LoginForm t={t} locale={locale} demo={isDemoMode()} highlightDemo={demo === "1"} />;
+  return <LoginForm t={t} locale={locale} demo={isDemoMode()} highlightDemo={demo === "1"} linkNotice={link === "1"} />;
 }

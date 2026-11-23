@@ -6,7 +6,7 @@ import { getMemoryDatabase } from "@/lib/db/memory-store";
 import { MemoryStore } from "@/lib/db/memory-store";
 import { DEMO_EMAIL, DEMO_PASSWORD, demoOrganizationDefaults, ensureDemoOrganization, seedDemoData } from "@/lib/db/demo-seed";
 import { newId } from "@/lib/db/store";
-import { isDemoMode } from "@/lib/env";
+import { env, isDemoMode } from "@/lib/env";
 import { LOCALE_COOKIE, isLocale } from "@/lib/i18n";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createOrganizationSchema, signInSchema, signUpSchema } from "@/lib/validation";
@@ -43,7 +43,7 @@ export async function signUpAction(_prev: ActionState, formData: FormData): Prom
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, kvkk_ack_at: new Date().toISOString() } } });
+  const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name, kvkk_ack_at: new Date().toISOString() }, emailRedirectTo: `${env.appUrl}/auth/callback?next=/onboarding` } });
   if (error) return { error: error.message };
   if (!data.session) return { message: "check_email" };
   redirect("/onboarding");
@@ -129,4 +129,17 @@ export async function createOrganizationAction(_prev: ActionState, formData: For
     await seedDemoData(store, { ownerUserId: user.id });
   }
   redirect("/inbox");
+}
+
+/**
+ * Sends a password-reset email. Always answers the same way, so the form cannot be used to find out
+ * which addresses have an account.
+ */
+export async function requestPasswordResetAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) return { error: "E-posta geçersiz / invalid email" };
+  if (isDemoMode()) return { message: "demo" };
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${env.appUrl}/auth/callback?next=/set-password` });
+  return { message: "sent" };
 }
